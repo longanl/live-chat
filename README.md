@@ -317,32 +317,3 @@ WebSocket 端点：`ws://{host}:8080/ws/{userId}`
   "data": {}
 }
 ```
-
-## 优化建议
-
-以下是项目运行前建议优化的点：
-
-### 必须处理
-
-1. **数据库连接改成本地** — `application.yml` 中 `spring.datasource.url` 当前为 `jdbc:mysql://mysql:3306/live_chat`（Docker 主机名），需要改为 `localhost` 或实际 IP
-
-2. **前端 WebSocket 地址改为可配置** — `front-end/src/utils/websocket.js:45` 中 `ws://47.96.247.155:8080/ws/${userId}` 是硬编码的生产 IP，建议改为环境变量或相对路径：
-   ```js
-   const wsUrl = import.meta.env.VITE_WS_URL || `ws://${location.hostname}:8080`
-   websocket = new WebSocket(`${wsUrl}/ws/${userId}`)
-   ```
-   然后在 `.env.development` 中配置 `VITE_WS_URL=ws://localhost:8080`
-
-### 建议处理
-
-3. **JWT 密钥不要明文硬编码** — `application.yml` 中 `live-chat.jwt.secret-key: xuziran`，建议改为环境变量 `${JWT_SECRET}` 或使用更复杂的密钥
-
-4. **私聊消息广播问题** — 当前 `WebSocketServer` 收到私聊消息后调用 `sendToAllClient()` 广播给所有在线用户，客户端才做过滤。建议改为 `sendToOneClient()` 仅发送给收发双方，避免消息泄露
-
-5. **OSS 配置改为可选** — 如果不配置 OSS，头像上传接口会报错。建议添加开关或提供默认头像逻辑
-
-6. **注册添加用户名唯一校验** — 当前注册接口直接 INSERT，没有检查用户名是否已存在，会导致数据库抛唯一键异常
-
-7. **Redis 配置清理** — 项目中声明了 Redis 依赖和 `@EnableCaching` 注解，但消息缓存逻辑实际上并未实现（只在 `MessagesController` 的注释中提及）。建议要么实现缓存，要么移除相关依赖
-
-8. **前端包名修正** — `front-end/package.json` 中的 `name` 字段当前为 `vue-tlias-management`，建议改为 `live-chat-frontend`
