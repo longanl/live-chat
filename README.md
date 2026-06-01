@@ -9,7 +9,7 @@
 - **私聊**: 点对点私密聊天
 - **好友系统**: 搜索添加好友、审批好友请求、拒绝请求、删除好友
 - **实时在线**: WebSocket 实时推送在线用户列表和在线人数
-- **头像上传**: 阿里云 OSS 存储用户头像
+- **头像上传**: 本地文件存储，Nginx 托管静态资源
 - **消息历史**: 持久化存储聊天记录，支持历史消息查询
 - **JWT 认证**: 基于 Token 的接口鉴权
 - **API 文档**: 内置 Swagger 在线接口文档
@@ -24,8 +24,7 @@
 | Element Plus | ^2.4.4 | MySQL | 8.x |
 | Axios | ^1.7.2 | WebSocket | (内置) |
 | Vite | ^3.0.9 | JWT (jjwt) | 0.9.1 |
-| ESLint + Prettier | - | Aliyun OSS SDK | 3.17.4 |
-| | | Redis | (依赖已声明) |
+| ESLint + Prettier | - | Nginx | (生产环境图片托管) |
 
 ## 快速开始
 
@@ -35,7 +34,7 @@
 - Node.js 16+
 - MySQL 8.0+
 - Maven 3.6+
-- (可选) 阿里云 OSS 账号（用于头像上传，不上传头像可跳过）
+- (可选) Nginx（生产环境用于托管上传的图片）
 
 ### 1. 克隆项目
 
@@ -96,7 +95,7 @@ CREATE TABLE IF NOT EXISTS user_relations (
 cd back-end
 ```
 
-修改 `src/main/resources/application.yml` 中的数据库连接和 OSS 配置：
+修改 `src/main/resources/application.yml` 中的数据库连接：
 
 ```yaml
 spring:
@@ -106,15 +105,11 @@ spring:
     password: your-password
 ```
 
-如果不使用 OSS 头像上传功能，可以简单配置占位符：
+确保本地图片存储目录存在：
 
-```yaml
-live-chat:
-  alioss:
-    endpoint: https://oss-cn-hangzhou.aliyuncs.com
-    access-key-id: your-access-key
-    access-key-secret: your-secret
-    bucket-name: your-bucket
+```bash
+sudo mkdir -p /data/livechat/images
+sudo chmod -R 755 /data/livechat/images
 ```
 
 然后启动：
@@ -150,14 +145,13 @@ live-chat/
 │   └── src/main/
 │       ├── java/com/xuziran/livechat/
 │       │   ├── LiveChatApplication.java          # 启动类
-│       │   ├── config/                           # 配置类
-│       │   │   ├── OssConfiguration.java         # OSS Bean 配置
-│       │   │   ├── WebMvcConfiguration.java      # 拦截器、Swagger
-│       │   │   └── WebSocketConfiguration.java   # WebSocket 导出器
+│   │   ├── config/                           # 配置类
+│   │   │   ├── WebMvcConfiguration.java      # 拦截器、静态资源、Swagger
+│   │   │   └── WebSocketConfiguration.java   # WebSocket 导出器
 │       │   ├── constant/
 │       │   │   └── MessageConstant.java          # 消息类型常量
 │       │   ├── controller/                       # REST 控制器
-│       │   │   ├── FileController.java           # 文件上传
+│       │   │   ├── FileController.java           # 文件上传（本地存储）
 │       │   │   ├── FriendsController.java        # 好友管理
 │       │   │   ├── MessagesController.java       # 消息历史
 │       │   │   └── UsersController.java          # 用户相关
@@ -241,7 +235,7 @@ live-chat/
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/uploadavatar687` | 上传头像到阿里云 OSS |
+| POST | `/uploadavatar687` | 上传头像（本地 `/data/livechat/images/` 目录） |
 
 ## WebSocket 通信协议
 
@@ -306,7 +300,28 @@ WebSocket 端点：`ws://{host}:8080/ws/{userId}`
 
 ### 前端代理配置
 
-`vite.config.js` 已配置 `/api` 代理到后端 `localhost:8080`，开发时前端请求 `/api/xxx` 会自动转发。
+`vite.config.js` 已配置 `/api` 和 `/images` 代理到后端 `localhost:8080`，开发时前端请求自动转发到后端。
+
+### Nginx 生产环境配置
+
+生产环境建议用 Nginx 托管上传的图片，配置如下：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location /images/ {
+        alias /data/livechat/images/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        proxy_pass http://localhost:8080;
+    }
+}
+```
 
 ### 统一响应格式
 

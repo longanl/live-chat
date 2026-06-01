@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.xuziran</groupId>
     <artifactId>live-chat</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     <name>live-chat</name>
     <description>live-chat</description>
     <url/>

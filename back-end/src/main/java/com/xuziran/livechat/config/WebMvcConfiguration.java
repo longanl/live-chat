@@ -2,6 +2,7 @@ package com.xuziran.livechat.config;
 
 import com.xuziran.livechat.interceptor.JwtTokenInterceptor;
 import com.xuziran.livechat.json.JacksonObjectMapper;
+import com.xuziran.livechat.properties.FileProperties;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
@@ -22,6 +24,9 @@ public class WebMvcConfiguration implements WebMvcConfigurer{
 
     @Autowired
     private JwtTokenInterceptor jwtTokenInterceptor;
+
+    @Autowired
+    private FileProperties fileProperties;
 
     // 注册拦截器
     public void addInterceptors(InterceptorRegistry registry) {
@@ -44,6 +49,12 @@ public class WebMvcConfiguration implements WebMvcConfigurer{
                         .title("在线聊天室")
                         .version("1.0")
                         .description("在线聊天室接口文档"));
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("file:" + fileProperties.getPath());
     }
 
     //扩展消息转换器
