@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.xuziran.livechat.mapper.MessagesMapper">
+    <insert id="insertMessage">
+        insert into chat_messages(sender_id, receiver_id, message_type, content, file_id, send_time, read_status)
+        values (#{senderId}, #{receiverId}, #{messageType}, #{content}, #{fileId}, #{sendTime}, #{readStatus})
+    </insert>
+    <update id="update">
+        update chat_messages set read_status=1 where sender_id=#{friendId} and receiver_id=#{userId}
+    </update>
+    <select id="queryAll" resultType="com.xuziran.livechat.pojo.VO.MessageVO">
+        select c.*, u.nickname as nickname,u.avatar as avatar from chat_messages c join users u on c.sender_id=u.id order by c.send_time
+    </select>
+    <select id="queryUserById" resultType="com.xuziran.livechat.pojo.entity.User">
+        select * from users where id=#{id}
+    </select>
+</mapper>

@@ -1,0 +1,42 @@
+server:
+  port: 8080
+  address: 0.0.0.0
+spring:
+# 激活配置文件
+  profiles:
+    active: dev
+  main:
+    allow-circular-references: true
+  servlet:
+    multipart:
+      #  文件上传最大限制
+      max-file-size: 10MB
+      #  文件请求最大限制
+      max-request-size: 100MB
+  datasource:
+    url: jdbc:mysql://localhost:3306/live_chat?useSSL=true&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+# 映射文件位置
+  mapper-locations: classpath:mapper/*Mapper.xml
+
+
+# 阿里云
+live-chat:
+  alioss:
+    endpoint: ${sky.alioss.endpoint}
+    access-key-id: ${sky.alioss.access-key-id}
+    access-key-secret: ${sky.alioss.access-key-secret}
+    bucket-name: ${sky.alioss.bucket-name}
+  jwt:
+    token-name: token
+    secret-key: xuziran
+    ttl: 7200000
+
+
