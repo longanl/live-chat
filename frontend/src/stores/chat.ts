@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { getHistory, getUnread, markRead } from '@/api/messages';
-import { Friendslist, deleteFriend } from '@/api/friends';
+import { Friendslist, deleteFriend, lookNewFriend } from '@/api/friends';
 import {
   addGroupMembers,
   createGroup,
@@ -36,6 +36,8 @@ export const useChatStore = defineStore('chat', () => {
   const friends = ref<Friend[]>([]);
   /** 好友列表是否已加载完成（用于区分「尚未加载」与「确实非好友」） */
   const friendsLoaded = ref(false);
+  /** 待处理的好友申请（顶栏红点 / 联系人页共用） */
+  const pendingRequests = ref<Friend[]>([]);
   const currentUser = ref<UserInfo>(JSON.parse(localStorage.getItem('user') ?? 'null') || {});
   const errorMessage = ref('');
 
@@ -331,12 +333,25 @@ export const useChatStore = defineStore('chat', () => {
     }
   };
 
+  /** 拉取待处理的好友申请（顶栏红点 / 联系人页共用） */
+  const loadPendingRequests = async (): Promise<void> => {
+    try {
+      const res = await lookNewFriend();
+      if (res.code === 200 && res.data) {
+        pendingRequests.value = res.data;
+      }
+    } catch (error) {
+      console.error('加载好友申请失败', error);
+    }
+  };
+
   return {
     // 状态
     currentUser,
     errorMessage,
     friends,
     friendsLoaded,
+    pendingRequests,
     conversations,
     historyByConv,
     unreadMap,
@@ -367,6 +382,7 @@ export const useChatStore = defineStore('chat', () => {
     loadMembers,
     // 好友
     getFriends,
+    loadPendingRequests,
     deletePerson
   };
 });
