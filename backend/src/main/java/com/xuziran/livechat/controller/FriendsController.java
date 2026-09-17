@@ -26,11 +26,11 @@ public class FriendsController {
 
     @GetMapping("/list")
     @Operation(summary = "查询好友列表（当前登录用户）")
-    public Result<List<User>> list() {
+    public Result<PageResult<User>> list(@RequestParam(defaultValue = "1") Integer page,
+                                          @RequestParam(defaultValue = "20") Integer size) {
         Long userId = BaseContext.getCurrentId();
-        log.info("查询好友列表 userId={}", userId);
-        List<User> list = friendsService.list(userId);
-        return Result.success(list);
+        log.info("查询好友列表 userId={} page={} size={}", userId, page, size);
+        return Result.success(friendsService.list(userId, page, size));
     }
     @GetMapping("/require")
     @Operation(summary = "查询未处理的好友请求（当前登录用户）")

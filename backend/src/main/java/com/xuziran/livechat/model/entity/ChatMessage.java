@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -19,6 +21,7 @@ public class ChatMessage implements Serializable {
     /** 发送者ID */
     private Long senderId;
     /** 1-文本 2-文件 */
+    @Schema(allowableValues = {"1", "2"})
     private Integer messageType;
     /** 文本正文（文件消息可为说明文字） */
     private String content;
@@ -28,8 +31,8 @@ public class ChatMessage implements Serializable {
     /** image / video / file */
     private String fileType;
     private LocalDateTime sendTime;
-  /** 客户端幂等UUID（用于去重） */
-  private String clientMsgId;
-  /** 是否已撤回（0=否，1=是） */
-  private Integer recalled;
+    /** 客户端幂等UUID（用于去重） */
+    private String clientMsgId;
+    /** 是否已撤回（0=否，1=是） */
+    private Integer recalled;
 }

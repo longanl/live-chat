@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -14,20 +13,19 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Conversation implements Serializable {
+public class FriendRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long id;
-    /** 1-私聊 2-群聊 */
-    @Schema(allowableValues = {"1", "2"})
-    private Integer type;
-    /** 群聊名称；私聊为空 */
-    private String name;
-    /** 群主用户ID；私聊为空 */
-    private Long ownerId;
-    /** 群头像 */
-    private String avatar;
-    /** 群公告 */
-    private String notice;
+    /** 申请人ID */
+    private Long fromUserId;
+    /** 接收人ID */
+    private Long toUserId;
+    /** 0-待处理 1-已同意 2-已拒绝(可再次申请) */
+    @Schema(allowableValues = {"0", "1", "2"})
+    private Integer status;
+    /** 处理时间 */
+    private LocalDateTime handleTime;
+    /** 申请时间 */
     private LocalDateTime createTime;
 }

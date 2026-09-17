@@ -1,32 +1,25 @@
-package com.xuziran.livechat.model.entity;
+package com.xuziran.livechat.model.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class User  implements Serializable {
+public class UserVO {
     private Long id;
     private String username;
-    @JsonIgnore
-    private String password;
     private String avatar;
     private String nickname;
     @Schema(allowableValues = {"0", "1"})
     private Integer status;
-    private LocalDateTime createTime;
     private LocalDateTime updateTime;
-    /** 好友列表回传：与该好友的私聊会话ID（未聊过为 null），不属于 users 表列 */
-    private Long conversationId;
-    /** 个性签名 */
-    private String signature;
+    private String token;
+    private Boolean rememberMe;
 }

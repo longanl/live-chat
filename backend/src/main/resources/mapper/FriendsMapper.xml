@@ -68,6 +68,12 @@
         JOIN friend_relations r
           ON (r.user_id = #{userId} AND u.id = r.friend_id)
           OR (r.friend_id = #{userId} AND u.id = r.user_id)
+        order by u.id
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="countList" resultType="java.lang.Long">
+        select count(*) from friend_relations r where r.user_id = #{userId} or r.friend_id = #{userId}
     </select>
 
     <select id="listRequest" resultType="com.xuziran.livechat.model.entity.User">

@@ -166,7 +166,7 @@ public class MessagesServiceImpl implements MessagesService {
             messagingTemplate.convertAndSend(Constant.TOPIC_CONVERSATION_PREFIX + vo.getConversationId(), vo);
         } else {
             // 私聊：发给双方成员（含发送者自身回显），与 WS 通道行为一致
-            List<User> members = messagesMapper.selectConversationMembers(vo.getConversationId());
+            List<User> members = messagesMapper.selectConversationMembers(vo.getConversationId(), 0, 100);
             for (User member : members) {
                 if (member.getId() == null) {
                     continue;

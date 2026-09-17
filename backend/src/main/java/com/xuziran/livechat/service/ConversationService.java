@@ -4,6 +4,7 @@ import com.xuziran.livechat.model.dto.CreateGroupDTO;
 import com.xuziran.livechat.model.dto.MemberIdsDTO;
 import com.xuziran.livechat.model.dto.UpdateGroupDTO;
 import com.xuziran.livechat.model.entity.User;
+import com.xuziran.livechat.model.vo.PageResult;
 import com.xuziran.livechat.model.vo.ConversationVO;
 
 import java.util.List;
@@ -15,13 +16,13 @@ import java.util.List;
 public interface ConversationService {
 
     /** 我的会话列表：群聊 + 已建立的私聊 */
-    List<ConversationVO> listMine(Long userId);
+    PageResult<ConversationVO> listMine(Long userId, Integer page, Integer size);
 
     /** 会话详情（需为会话成员） */
     ConversationVO detail(Long conversationId, Long userId);
 
     /** 会话成员列表（需为会话成员） */
-    List<User> members(Long conversationId, Long userId);
+    PageResult<User> members(Long conversationId, Long userId, Integer page, Integer size);
 
     /** 创建群聊：创建者自动成为群主与成员，返回新会话ID */
     Long createGroup(Long ownerId, CreateGroupDTO dto);

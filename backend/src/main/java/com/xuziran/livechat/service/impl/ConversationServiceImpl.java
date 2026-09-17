@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.xuziran.livechat.model.vo.PageResult;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -28,26 +29,42 @@ public class ConversationServiceImpl implements ConversationService {
     private final MessagesMapper messagesMapper;
 
     @Override
-    public List<ConversationVO> listMine(Long userId) {
+    public PageResult<ConversationVO> listMine(Long userId, Integer page, Integer size) {
         if (userId == null) {
-            return Collections.emptyList();
+            return PageResult.of(0L, page == null ? 1 : page, size == null ? 20 : size, Collections.emptyList());
         }
-        return messagesMapper.selectMyConversations(userId);
+        if (page == null || page < 1) page = 1;
+        if (size == null || size < 1 || size > 100) size = 20;
+        Long total = messagesMapper.countMyConversations(userId);
+        if (total == null || total == 0) {
+            return PageResult.of(0L, page, size, Collections.emptyList());
+        }
+        int offset = (page - 1) * size;
+        List<ConversationVO> list = messagesMapper.selectMyConversations(userId, offset, size);
+        return PageResult.of(total, page, size, list);
     }
 
     @Override
     public ConversationVO detail(Long conversationId, Long userId) {
         requireMember(conversationId, userId);
-        return listMine(userId).stream()
+        return listMine(userId, 1, 100).getList().stream()
                 .filter(c -> conversationId.equals(c.getConversationId()))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("会话不存在"));
     }
 
     @Override
-    public List<User> members(Long conversationId, Long userId) {
+    public PageResult<User> members(Long conversationId, Long userId, Integer page, Integer size) {
         requireMember(conversationId, userId);
-        return messagesMapper.selectConversationMembers(conversationId);
+        if (page == null || page < 1) page = 1;
+        if (size == null || size < 1 || size > 100) size = 20;
+        Long total = messagesMapper.countConversationMembers(conversationId);
+        if (total == null || total == 0) {
+            return PageResult.of(0L, page, size, Collections.emptyList());
+        }
+        int offset = (page - 1) * size;
+        List<User> list = messagesMapper.selectConversationMembers(conversationId, offset, size);
+        return PageResult.of(total, page, size, list);
     }
 
     @Override

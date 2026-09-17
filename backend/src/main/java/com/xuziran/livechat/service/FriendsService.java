@@ -9,7 +9,7 @@ import java.util.List;
 public interface FriendsService {
     void add(Long userId, String friendUsername);
 
-    List<User> list(Long id);
+    PageResult<User> list(Long id, Integer page, Integer size);
 
     void approve(Long userId, Long friendId);
 

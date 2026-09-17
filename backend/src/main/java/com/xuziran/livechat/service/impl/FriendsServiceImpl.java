@@ -21,8 +21,16 @@ public class FriendsServiceImpl implements FriendsService {
     private final UserMapper userMapper;
 
     @Override
-    public List<User> list(Long id) {
-        return friendsMapper.list(id);
+    public PageResult<User> list(Long id, Integer page, Integer size) {
+        if (page == null || page < 1) page = 1;
+        if (size == null || size < 1 || size > 100) size = 20;
+        Long total = friendsMapper.countList(id);
+        if (total == null || total == 0) {
+            return PageResult.<User>of(0L, page, size, Collections.emptyList());
+        }
+        int offset = (page - 1) * size;
+        List<User> list = friendsMapper.list(id, offset, size);
+        return PageResult.of(total, page, size, list);
     }
 
     @Override

@@ -32,10 +32,20 @@ public interface MessagesMapper {
                                   @Param("userId") Long userId);
 
     /** 我的会话列表（群聊 + 已建立的私聊，含对方信息、最后一条消息、未读数） */
-    List<ConversationVO> selectMyConversations(@Param("userId") Long userId);
+    List<ConversationVO> selectMyConversations(@Param("userId") Long userId,
+                                                        @Param("offset") Integer offset,
+                                                        @Param("size") Integer size);
+
+    /** 我的会话总数 */
+    Long countMyConversations(@Param("userId") Long userId);
 
     /** 会话成员列表（含在线状态） */
-    List<User> selectConversationMembers(@Param("conversationId") Long conversationId);
+    List<User> selectConversationMembers(@Param("conversationId") Long conversationId,
+                                                                  @Param("offset") Integer offset,
+                                                                  @Param("size") Integer size);
+
+    /** 会话成员总数 */
+    Long countConversationMembers(@Param("conversationId") Long conversationId);
 
     /** 会话成员总数 */
     Long selectMemberCount(@Param("conversationId") Long conversationId);

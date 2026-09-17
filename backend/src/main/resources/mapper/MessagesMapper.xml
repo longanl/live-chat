@@ -84,6 +84,11 @@
         left join users lu on lu.id = lm.sender_id
         where me.user_id = #{userId}
         order by coalesce(lm.send_time, c.create_time) desc, c.id desc
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="countMyConversations" resultType="java.lang.Long">
+        select count(*) from conversation_members cm where cm.user_id = #{userId}
     </select>
 
     <select id="selectConversationMembers" resultType="com.xuziran.livechat.model.entity.User">
@@ -92,6 +97,11 @@
         join users u on u.id = cm.user_id
         where cm.conversation_id = #{conversationId}
         order by cm.id
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="countConversationMembers" resultType="java.lang.Long">
+        select count(*) from conversation_members where conversation_id = #{conversationId}
     </select>
 
     <select id="selectMemberCount" resultType="java.lang.Long">

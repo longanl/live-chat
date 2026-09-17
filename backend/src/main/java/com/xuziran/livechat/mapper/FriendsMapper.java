@@ -34,7 +34,12 @@ public interface FriendsMapper {
     void invalidateRequests(@Param("userId") Long userId, @Param("friendId") Long friendId);
 
     /** 好友列表（含与该好友的私聊会话ID） */
-    List<User> list(@Param("userId") Long userId);
+    List<User> list(@Param("userId") Long userId,
+                             @Param("offset") Integer offset,
+                             @Param("size") Integer size);
+
+    /** 好友总数 */
+    Long countList(@Param("userId") Long userId);
 
     /** 收到的待处理申请列表 */
     List<User> listRequest(@Param("userId") Long userId);
