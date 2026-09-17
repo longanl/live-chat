@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Friend } from '@/types'
 import { useChatStore } from '@/stores/chat'
 import { addFriends } from '@/api/friends'
@@ -14,17 +14,33 @@ const keyword = ref('')
 const showAddDialog = ref(false)
 const addUsername = ref('')
 const adding = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(20)
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
-  if (!kw) return chatStore.friends
-  return chatStore.friends.filter((f) =>
+  if (!kw) return chatStore.friends.list
+  return chatStore.friends.list.filter((f) =>
     `${f.nickname ?? ''} ${f.username ?? ''}`.toLowerCase().includes(kw)
   )
 })
 
 const onlineFriends = computed(() => filtered.value.filter((f) => f.status === 1))
 const offlineFriends = computed(() => filtered.value.filter((f) => f.status !== 1))
+
+function onPageChange(page: number, size: number): void {
+  currentPage.value = page
+  pageSize.value = size
+  chatStore.getFriends(page, size)
+}
+
+watch(
+  () => [chatStore.friends.page, chatStore.friends.size],
+  ([p, s]) => {
+    currentPage.value = p
+    pageSize.value = s
+  }
+)
 
 async function submitAdd(): Promise<void> {
   const username = addUsername.value.trim()
@@ -106,6 +122,19 @@ async function submitAdd(): Promise<void> {
         :title="keyword ? '没有匹配的联系人' : '还没有好友'
         "
         description="点击上方按钮，按用户名添加好友"
+      />
+    </div>
+
+    <div class="contact-list__foot">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :total="chatStore.friends.total"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        small
+        @current-change="(p) => { currentPage = p; chatStore.getFriends(p, pageSize) }"
+        @size-change="(s) => { pageSize = s; chatStore.getFriends(currentPage, s) }"
       />
     </div>
 
@@ -202,5 +231,11 @@ async function submitAdd(): Promise<void> {
   margin: 10px 0 0;
   font-size: 12px;
   color: var(--lc-text-3);
+}
+
+.contact-list__foot {
+  padding: 8px;
+  border-top: 1px solid var(--lc-border);
+  background-color: var(--lc-surface);
 }
 </style>

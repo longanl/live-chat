@@ -45,7 +45,7 @@ const conversationId = computed<number | null>(() => {
 const conversation = computed(() => chatStore.conversationOf(conversationId.value))
 const isGroup = computed(() => !!groupId.value || isGroupConversation(conversation.value))
 
-const peer = computed(() => chatStore.friends.find((f) => f.id === peerId.value) ?? null)
+   const peer = computed(() => chatStore.friends.list.find((f) => f.id === peerId.value) ?? null)
 
 /** 私聊对方是否为好友（须等好友列表加载完成后判定，避免把「尚未加载」误判为非好友） */
 const isFriendPeer = computed(() => !!peer.value)

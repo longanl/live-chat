@@ -14,7 +14,7 @@ const router = useRouter()
 const chatStore = useChatStore()
 const loading = ref(false)
 
-const onlineCount = computed(() => chatStore.friends.filter((f) => f.status === 1).length)
+const onlineCount = computed(() => chatStore.friends.list.filter((f) => f.status === 1).length)
 
 async function loadRequests(): Promise<void> {
   loading.value = true
@@ -72,7 +72,7 @@ onMounted(() => {
     <section class="stat-row">
       <div class="stat-card">
         <span class="stat-card__label">好友总数</span>
-        <span class="stat-card__value">{{ chatStore.friends.length }}</span>
+        <span class="stat-card__value">{{ chatStore.friends.list.length }}</span>
       </div>
       <div class="stat-card">
         <span class="stat-card__label">在线好友</span>
@@ -121,7 +121,7 @@ onMounted(() => {
       <div class="page__section-title">在线好友</div>
       <ul v-if="onlineCount" class="friend-grid">
         <li
-          v-for="friend in chatStore.friends.filter((f) => f.status === 1)"
+          v-for="friend in chatStore.friends.list.filter((f) => f.status === 1)"
           :key="friend.id"
           class="friend-card"
           @click="startChat(friend)"

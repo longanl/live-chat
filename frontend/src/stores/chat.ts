@@ -10,7 +10,7 @@ import {
   quitGroup
 } from '@/api/conversations';
 import { ElMessage } from 'element-plus';
-import type { ChatMessage, Conversation, Friend, UnreadStat, UserInfo } from '@/types';
+import type { ChatMessage, Conversation, Friend, PageResult, UnreadStat, UserInfo } from '@/types';
 import { HISTORY_PAGE_SIZE } from '@/utils/constants';
 import { CONVERSATION_TYPE_GROUP, CONVERSATION_TYPE_P2P } from '@/utils/conversation';
 
@@ -30,10 +30,10 @@ export const useChatStore = defineStore('chat', () => {
   const loadedAll = ref<Record<number, boolean>>({});
   /** 当前正在查看的会话 */
   const activeConversationId = ref<number | null>(null);
-  /** 我的会话列表（群聊 + 已建立的私聊） */
-  const conversations = ref<Conversation[]>([]);
-  /** 好友列表（联系人页使用） */
-  const friends = ref<Friend[]>([]);
+   /** 我的会话列表（群聊 + 已建立的私聊），服务端分页结果 */
+   const conversations = ref<PageResult<Conversation>>({ total: 0, page: 1, size: 20, list: [] });
+   /** 好友列表（联系人页使用），服务端分页结果 */
+   const friends = ref<PageResult<Friend>>({ total: 0, page: 1, size: 20, list: [] });
   /** 好友列表是否已加载完成（用于区分「尚未加载」与「确实非好友」） */
   const friendsLoaded = ref(false);
   /** 待处理的好友申请（顶栏红点 / 联系人页共用） */
@@ -50,19 +50,19 @@ export const useChatStore = defineStore('chat', () => {
   const hasLoadedAll = (conversationId?: number | null): boolean =>
     !!conversationId && !!loadedAll.value[conversationId];
 
-  /** 由会话ID取会话 */
-  const conversationOf = (conversationId?: number | null): Conversation | null =>
-    conversationId
-      ? conversations.value.find((c) => c.conversationId === conversationId) ?? null
-      : null;
+   /** 由会话ID取会话 */
+   const conversationOf = (conversationId?: number | null): Conversation | null =>
+     conversationId
+       ? conversations.value.list.find((c) => c.conversationId === conversationId) ?? null
+       : null;
 
-  /** 由对方用户ID取私聊会话（尚未聊过时为 null，首次发言由后端懒建会话） */
-  const conversationByPeer = (peerId?: number | null): Conversation | null =>
-    peerId
-      ? conversations.value.find(
-          (c) => c.type === CONVERSATION_TYPE_P2P && c.peerId === peerId
-        ) ?? null
-      : null;
+   /** 由对方用户ID取私聊会话（尚未聊过时为 null，首次发言由后端懒建会话） */
+   const conversationByPeer = (peerId?: number | null): Conversation | null =>
+     peerId
+       ? conversations.value.list.find(
+           (c) => c.type === CONVERSATION_TYPE_P2P && c.peerId === peerId
+         ) ?? null
+       : null;
 
   /** 某会话未读数：本地累加值优先，缺省回落服务端列表值 */
   const unreadOf = (conversationId?: number | null): number => {
@@ -74,13 +74,13 @@ export const useChatStore = defineStore('chat', () => {
 
   // ==================== 派生数据 ====================
   /** 群聊会话（含内置群） */
-  const groupConversations = computed(() =>
-    conversations.value.filter((c) => c.type === CONVERSATION_TYPE_GROUP)
-  );
-  /** 私聊会话（已有消息往来） */
-  const p2pConversations = computed(() =>
-    conversations.value.filter((c) => c.type === CONVERSATION_TYPE_P2P)
-  );
+   const groupConversations = computed(() =>
+     conversations.value.list.filter((c) => c.type === CONVERSATION_TYPE_GROUP)
+   );
+   /** 私聊会话（已有消息往来） */
+   const p2pConversations = computed(() =>
+     conversations.value.list.filter((c) => c.type === CONVERSATION_TYPE_P2P)
+   );
   /** 当前查看的会话对象 */
   const activeConversation = computed(() => conversationOf(activeConversationId.value));
 
@@ -89,25 +89,25 @@ export const useChatStore = defineStore('chat', () => {
    * 拉取我的会话列表，并用服务端未读数校准本地累加值。
    * 被邀请入群、首次私聊建立会话后都以此接口对齐。
    */
-  const loadConversations = async (): Promise<void> => {
-    if (!currentUser.value.id) return;
-    try {
-      const res = await getConversations();
-      if (res.code === 200 && res.data) {
-        conversations.value = res.data;
-        const map: Record<number, number> = {};
-        res.data.forEach((c) => {
-          map[c.conversationId] = c.unreadCount ?? 0;
-        });
-        unreadMap.value = map;
-      } else {
-        errorMessage.value = res.msg || '加载会话列表失败';
-      }
-    } catch (error) {
-      errorMessage.value = (error as Error).message || '网络异常';
-      console.error('加载会话列表失败', error);
-    }
-  };
+   const loadConversations = async (page = 1, size = 20): Promise<void> => {
+     if (!currentUser.value.id) return;
+     try {
+       const res = await getConversations(page, size);
+       if (res.code === 200 && res.data) {
+         conversations.value = res.data;
+         const map: Record<number, number> = {};
+         res.data.list.forEach((c) => {
+           map[c.conversationId] = c.unreadCount ?? 0;
+         });
+         unreadMap.value = map;
+       } else {
+         errorMessage.value = res.msg || '加载会话列表失败';
+       }
+     } catch (error) {
+       errorMessage.value = (error as Error).message || '网络异常';
+       console.error('加载会话列表失败', error);
+     }
+   };
 
   // ==================== 历史消息 ====================
   /**
@@ -211,19 +211,19 @@ export const useChatStore = defineStore('chat', () => {
       unreadMap.value = { ...unreadMap.value, [convId]: (unreadMap.value[convId] ?? 0) + 1 };
     }
 
-    const index = conversations.value.findIndex((c) => c.conversationId === convId);
+     const index = conversations.value.list.findIndex((c) => c.conversationId === convId);
     if (index === -1) {
       void loadConversations();
       return;
     }
-    const [conv] = conversations.value.splice(index, 1);
-    conv.lastMessageId = msg.id ?? conv.lastMessageId;
-    conv.lastMessageType = msg.messageType ?? 1;
-    conv.lastContent = msg.content ?? '';
-    conv.lastFileName = msg.fileName ?? null;
-    conv.lastSenderNickname = mine ? currentUser.value.nickname : msg.nickname;
-    conv.lastSendTime = msg.sendTime ?? new Date().toISOString();
-    conversations.value.unshift(conv);
+     const [conv] = conversations.value.list.splice(index, 1);
+     conv.lastMessageId = msg.id ?? conv.lastMessageId;
+     conv.lastMessageType = msg.messageType ?? 1;
+     conv.lastContent = msg.content ?? '';
+     conv.lastFileName = msg.fileName ?? null;
+     conv.lastSenderNickname = mine ? currentUser.value.nickname : msg.nickname;
+     conv.lastSendTime = msg.sendTime ?? new Date().toISOString();
+     conversations.value.list.unshift(conv);
   };
 
   // ==================== 群组操作 ====================
@@ -287,35 +287,35 @@ export const useChatStore = defineStore('chat', () => {
     }
   };
 
-  /** 会话成员列表（信息栏使用，不落入全局状态） */
-  const loadMembers = async (conversationId: number): Promise<Friend[]> => {
-    try {
-      const res = await getConversationMembers(conversationId);
-      if (res.code === 200 && res.data) return res.data;
-    } catch (error) {
-      console.error('加载会话成员失败', error);
-    }
-    return [];
-  };
+   /** 会话成员列表（分页，信息栏使用） */
+   const loadMembers = async (conversationId: number, page = 1, size = 50): Promise<PageResult<Friend>> => {
+     try {
+       const res = await getConversationMembers(conversationId, page, size);
+       if (res.code === 200 && res.data) return res.data;
+     } catch (error) {
+       console.error('加载会话成员失败', error);
+     }
+     return { total: 0, page: 1, size: 50, list: [] };
+   };
 
   // ==================== 好友 ====================
   /** 好友列表（含与该好友的私聊会话ID） */
-  const getFriends = async (): Promise<void> => {
-    if (!currentUser.value.id) return;
-    errorMessage.value = '';
-    try {
-      const res = await Friendslist();
-      if (res.code === 200 && res.data) {
-        friends.value = res.data;
-        friendsLoaded.value = true;
-      } else {
-        errorMessage.value = res.msg || '请求失败';
-      }
-    } catch (error) {
-      errorMessage.value = (error as Error).message || '网络错误';
-      console.error('加载好友列表失败', error);
-    }
-  };
+   const getFriends = async (page = 1, size = 20): Promise<void> => {
+     if (!currentUser.value.id) return;
+     errorMessage.value = '';
+     try {
+       const res = await Friendslist(page, size);
+       if (res.code === 200 && res.data) {
+         friends.value = res.data;
+         friendsLoaded.value = true;
+       } else {
+         errorMessage.value = res.msg || '请求失败';
+       }
+     } catch (error) {
+       errorMessage.value = (error as Error).message || '网络错误';
+       console.error('加载好友列表失败', error);
+     }
+   };
 
   /** 删除好友 */
   const deletePerson = async (friendId: number): Promise<void> => {
