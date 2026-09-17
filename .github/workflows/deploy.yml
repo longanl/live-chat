@@ -1,5 +1,7 @@
 name: Deploy to ghcr.io
-on: [push]
+on:
+  push:
+    branches: [main]   # 建议限定分支，避免每次 push 都构建
 
 permissions:
   packages: write
@@ -14,10 +16,16 @@ jobs:
         service: [frontend, backend]
     steps:
       - uses: actions/checkout@v4
+
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: docker build -t ghcr.io/yourname/live-chat-${{ matrix.service }}:latest ./${{ matrix.service }}
-      - run: docker push ghcr.io/yourname/live-chat-${{ matrix.service }}:latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/live-chat-${{ matrix.service }}:latest

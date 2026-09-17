@@ -1,6 +1,6 @@
 services:
   web:
-    image: ghcr.io/yourname/live-chat-web:${TAG:-latest}
+    image: ghcr.io/longanl/live-chat-frontend:${TAG:-latest}
     build: ./frontend
     ports:
       - "80:80"
@@ -13,34 +13,28 @@ services:
     networks: [app]
 
   backend:
-    image: ghcr.io/yourname/live-chat-backend:${TAG:-latest}
+    image: ghcr.io/longanl/live-chat-backend:${TAG:-latest}
     build: ./backend
     restart: unless-stopped
     mem_limit: 640m
     environment:
       TZ: Asia/Shanghai
-
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_DATABASE: live_chat
       MYSQL_USERNAME: livechat
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-
       JWT_TOKEN_NAME: token
       JWT_SECRET: ${JWT_SECRET}
-
       UPLOAD_PATH: /var/www/pic_bed
       UPLOAD_DOMAIN: http://你的服务器IP或域名/files/
-
       SPRINGDOC_API_DOCS_PATH: /api-docs
       SPRINGDOC_SWAGGER_UI_PATH: /docs
-
       JAVA_TOOL_OPTIONS: >-
         -XX:MaxRAMPercentage=70
         -XX:+UseSerialGC
         -XX:+ExitOnOutOfMemoryError
         -Duser.timezone=Asia/Shanghai
-
     volumes:
       - pic-bed:/var/www/pic_bed
     networks: [app]
@@ -60,8 +54,9 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./backend/src/main/resources/chat.sql:/docker-entrypoint-initdb.d/chat.sql:ro
+    # 仅本地监听，不暴露公网
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     networks: [app]
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
