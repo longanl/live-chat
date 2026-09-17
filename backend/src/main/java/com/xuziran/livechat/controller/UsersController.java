@@ -15,10 +15,12 @@ import com.xuziran.livechat.common.properties.JwtProperties;
 import com.xuziran.livechat.common.result.Result;
 import com.xuziran.livechat.service.UserService;
 import com.xuziran.livechat.common.utils.JwtUtil;
+import com.xuziran.livechat.websocket.WsSessionRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.security.auth.login.AccountNotFoundException;
@@ -33,6 +35,11 @@ import java.util.Map;
 public class UsersController {
     private final JwtProperties jwtProperties;
     private final UserService userService;
+    private final WsSessionRegistry wsSessionRegistry;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private static final String PRESENCE_USERS_DEST = "/topic/online/users";
+    private static final String PRESENCE_COUNT_DEST = "/topic/online/count";
 
 
 
@@ -82,6 +89,10 @@ public class UsersController {
         Long userId = BaseContext.getCurrentId();
         log.info("用户：" + userId + "下线");
         userService.logout(userId);
+        boolean hadOtherSessions = wsSessionRegistry.unregisterAll(userId);
+        if (hadOtherSessions) {
+            // 其他标签页仍在线，无需广播（onDisconnected 会在最后一个会话断开时广播）
+        }
         return Result.success();
     }
 

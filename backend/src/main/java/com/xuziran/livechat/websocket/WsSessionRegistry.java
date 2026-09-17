@@ -52,4 +52,16 @@ public class WsSessionRegistry {
         Set<String> sessions = userSessions.get(userId);
         return sessions != null && !sessions.isEmpty();
     }
+
+    /** 注销该用户所有会话，返回是否仍有其他活跃会话（true=还有，false=已全部注销） */
+    public boolean unregisterAll(Long userId) {
+        Set<String> sessions = userSessions.remove(userId);
+        if (sessions == null || sessions.isEmpty()) {
+            return false;
+        }
+        for (String sessionId : sessions) {
+            sessionUsers.remove(sessionId);
+        }
+        return true;
+    }
 }
