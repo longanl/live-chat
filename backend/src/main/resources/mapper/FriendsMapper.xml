@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.xuziran.livechat.mapper.FriendsMapper">
+
+    <insert id="addRequest">
+        INSERT INTO friend_requests (from_user_id, to_user_id, status, create_time)
+        VALUES (#{fromUserId}, #{toUserId}, 0, NOW())
+            ON DUPLICATE KEY UPDATE status = 0, handle_time = NULL
+    </insert>
+
+    <select id="countPendingRequest" resultType="int">
+        SELECT COUNT(*)
+        FROM friend_requests
+        WHERE from_user_id = #{fromUserId} AND to_user_id = #{toUserId} AND status = 0
+    </select>
+
+    <update id="confirmRequest">
+        UPDATE friend_requests
+        SET status = 1, handle_time = NOW()
+        WHERE from_user_id = #{fromUserId} AND to_user_id = #{toUserId} AND status = 0
+    </update>
+
+    <update id="rejectRequest">
+        UPDATE friend_requests
+        SET status = 2, handle_time = NOW()
+        WHERE from_user_id = #{fromUserId} AND to_user_id = #{toUserId} AND status = 0
+    </update>
+
+    <insert id="insertRelation">
+        INSERT IGNORE INTO friend_relations (user_id, friend_id, create_time)
+        VALUES (#{userId}, #{friendId}, NOW())
+    </insert>
+
+    <select id="countRelation" resultType="int">
+        SELECT COUNT(*)
+        FROM friend_relations
+        WHERE user_id = #{userId} AND friend_id = #{friendId}
+    </select>
+
+    <delete id="deleteRelation">
+        DELETE FROM friend_relations
+        WHERE user_id = #{userId} AND friend_id = #{friendId}
+    </delete>
+
+    <update id="invalidateRequests">
+        UPDATE friend_requests
+        SET status = 2, handle_time = NOW()
+        WHERE ((from_user_id = #{userId} AND to_user_id = #{friendId})
+            OR (from_user_id = #{friendId} AND to_user_id = #{userId}))
+          AND status = 0
+    </update>
+
+    <select id="list" resultType="com.xuziran.livechat.model.entity.User">
+        SELECT
+        u.id,
+        u.username,
+        u.nickname,
+        u.avatar,
+        u.status,
+        (SELECT c.id FROM conversations c
+           JOIN conversation_members m1 ON m1.conversation_id = c.id AND m1.user_id = u.id
+           JOIN conversation_members m2 ON m2.conversation_id = c.id AND m2.user_id = #{userId}
+          WHERE c.type = 1
+          LIMIT 1) AS conversation_id
+        FROM users u
+        JOIN friend_relations r
+          ON (r.user_id = #{userId} AND u.id = r.friend_id)
+          OR (r.friend_id = #{userId} AND u.id = r.user_id)
+    </select>
+
+    <select id="listRequest" resultType="com.xuziran.livechat.model.entity.User">
+        SELECT
+            u.id,
+            u.username,
+            u.nickname,
+            u.avatar,
+            u.status,
+            r.create_time
+        FROM friend_requests r
+        JOIN users u ON u.id = r.from_user_id
+        WHERE r.to_user_id = #{userId} AND r.status = 0
+        ORDER BY r.create_time DESC
+    </select>
+
+    <!-- ============ 拉黑 ============ -->
+
+    <select id="countBlock" resultType="int">
+        SELECT COUNT(*) FROM user_blocks
+        WHERE (blocker_id=#{userId} AND blocked_id=#{targetId})
+           OR (blocker_id=#{targetId} AND blocked_id=#{userId})
+    </select>
+
+    <insert id="insertBlock">
+        INSERT INTO user_blocks(blocker_id, blocked_id, create_time)
+        VALUES (#{blockerId}, #{blockedId}, NOW())
+    </insert>
+
+    <delete id="deleteBlock">
+        DELETE FROM user_blocks
+        WHERE (blocker_id=#{blockerId} AND blocked_id=#{blockedId})
+           OR (blocker_id=#{blockedId} AND blocked_id=#{blockerId})
+    </delete>
+
+    <select id="selectBlockedPage" resultType="com.xuziran.livechat.model.vo.UserVO">
+        SELECT u.id, u.username, u.nickname, u.avatar, u.status
+        FROM user_blocks ub JOIN users u ON u.id = ub.blocked_id
+        WHERE ub.blocker_id = #{userId}
+        ORDER BY ub.create_time DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countBlocked" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM user_blocks WHERE blocker_id = #{userId}
+    </select>
+
+</mapper>

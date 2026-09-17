@@ -16,6 +16,8 @@ public class UserDetailVO {
     private String nickname;
     private String avatar;
     private Integer status;
+    /** 个性签名 */
+    private String signature;
     /** NONE / FRIEND / REQUEST_SENT / REQUEST_RECEIVED */
     private String relation;
 }

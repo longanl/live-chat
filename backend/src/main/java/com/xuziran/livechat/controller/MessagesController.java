@@ -58,6 +58,15 @@ public class MessagesController {
         return Result.success(vo);
     }
 
+    @PostMapping("/{id}/recall")
+    @Operation(summary = "撤回消息（仅发送者、发送后2分钟内）")
+    public Result recall(@PathVariable Long id) {
+        Long userId = BaseContext.getCurrentId();
+        log.info("撤回消息 userId={} messageId={}", userId, id);
+        messagesService.recall(id, userId);
+        return Result.success();
+    }
+
     @GetMapping("/unread")
     @Operation(summary = "按会话统计未读数（当前登录用户）")
     public Result<List<UnreadStat>> unread() {

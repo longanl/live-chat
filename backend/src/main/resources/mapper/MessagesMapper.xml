@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.xuziran.livechat.mapper.MessagesMapper">
+
+    <select id="queryUserById" resultType="com.xuziran.livechat.model.entity.User">
+        select * from users where id = #{id}
+    </select>
+
+    <!-- ============ 会话 ============ -->
+
+    <insert id="insertConversation" useGeneratedKeys="true" keyProperty="id">
+        insert into conversations(type, name, owner_id)
+        values (#{type}, #{name}, #{ownerId})
+    </insert>
+
+    <select id="selectConversationById" resultType="com.xuziran.livechat.model.entity.Conversation">
+        select * from conversations where id = #{id}
+    </select>
+
+    <select id="selectP2PConversationId" resultType="java.lang.Long">
+        select cm1.conversation_id
+        from conversation_members cm1
+        join conversation_members cm2
+             on cm2.conversation_id = cm1.conversation_id
+        join conversations c on c.id = cm1.conversation_id and c.type = 1
+        where cm1.user_id = #{uidA} and cm2.user_id = #{uidB}
+        order by cm1.conversation_id
+        limit 1
+    </select>
+
+    <insert id="insertMember">
+        insert into conversation_members(conversation_id, user_id, last_read_msg_id, join_time)
+        values (#{conversationId}, #{userId}, 0, NOW())
+        on duplicate key update conversation_id = conversation_id
+    </insert>
+
+    <select id="selectConversationMember" resultType="java.lang.Long">
+        select count(*) from conversation_members
+        where conversation_id = #{conversationId} and user_id = #{userId}
+    </select>
+
+    <!-- 我的会话列表：私聊取对方信息，群聊取群名/群主；最后一条消息与未读数均为批量子查询，避免 N+1 -->
+    <select id="selectMyConversations" resultType="com.xuziran.livechat.model.vo.ConversationVO">
+        select c.id                    as conversation_id,
+                c.type                  as type,
+                c.name                  as name,
+                c.owner_id              as owner_id,
+                c.avatar                as avatar,
+                c.notice                as notice,
+                c.create_time           as create_time,
+               (select count(*) from conversation_members cm2 where cm2.conversation_id = c.id) as member_count,
+               peer.peer_id            as peer_id,
+               peer.peer_nickname      as peer_nickname,
+               peer.peer_avatar        as peer_avatar,
+               peer.peer_status        as peer_status,
+               lm.id                   as last_message_id,
+               lm.content              as last_content,
+               lm.message_type         as last_message_type,
+               lm.file_name            as last_file_name,
+               lm.send_time            as last_send_time,
+               lu.nickname             as last_sender_nickname,
+               (select count(*) from chat_messages m3
+                 where m3.conversation_id = c.id
+                   and m3.id &gt; me.last_read_msg_id
+                   and m3.sender_id &lt;&gt; #{userId}) as unread_count
+        from conversation_members me
+        join conversations c on c.id = me.conversation_id
+        left join (
+            select cm.conversation_id, u.id as peer_id, u.nickname as peer_nickname,
+                   u.avatar as peer_avatar, u.status as peer_status
+            from conversation_members cm
+            join users u on u.id = cm.user_id
+            join conversations cc on cc.id = cm.conversation_id and cc.type = 1
+            where cm.user_id &lt;&gt; #{userId}
+        ) peer on peer.conversation_id = c.id
+        left join (
+            select m.conversation_id, max(m.id) as max_id
+            from chat_messages m
+            group by m.conversation_id
+        ) lastid on lastid.conversation_id = c.id
+        left join chat_messages lm on lm.id = lastid.max_id
+        left join users lu on lu.id = lm.sender_id
+        where me.user_id = #{userId}
+        order by coalesce(lm.send_time, c.create_time) desc, c.id desc
+    </select>
+
+    <select id="selectConversationMembers" resultType="com.xuziran.livechat.model.entity.User">
+        select u.id, u.username, u.nickname, u.avatar, u.status
+        from conversation_members cm
+        join users u on u.id = cm.user_id
+        where cm.conversation_id = #{conversationId}
+        order by cm.id
+    </select>
+
+    <select id="selectMemberCount" resultType="java.lang.Long">
+        select count(*) from conversation_members where conversation_id = #{conversationId}
+    </select>
+
+    <insert id="insertMembers">
+        insert into conversation_members(conversation_id, user_id, last_read_msg_id, join_time)
+        values
+        <foreach collection="userIds" item="uid" separator=",">
+            (#{conversationId}, #{uid}, 0, NOW())
+        </foreach>
+        on duplicate key update conversation_id = conversation_id
+    </insert>
+
+    <delete id="deleteMember">
+        delete from conversation_members
+        where conversation_id = #{conversationId} and user_id = #{userId}
+    </delete>
+
+    <!-- ============ 消息 ============ -->
+
+    <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
+        insert into chat_messages(conversation_id, sender_id, message_type, content,
+                                  file_url, file_name, file_size, file_type, send_time,
+                                  client_msg_id, recalled)
+        values (#{conversationId}, #{senderId}, #{messageType}, #{content},
+                #{fileUrl}, #{fileName}, #{fileSize}, #{fileType}, #{sendTime},
+                #{clientMsgId}, 0)
+    </insert>
+
+    <select id="selectHistoryPage" resultType="com.xuziran.livechat.model.vo.MessageVO">
+        select c.id,
+               c.conversation_id,
+               c.sender_id,
+               u.nickname,
+               u.avatar,
+               c.message_type,
+               c.content,
+               c.file_url,
+               c.file_name,
+               c.file_size,
+               c.file_type,
+               c.send_time
+        from chat_messages c
+        join users u on u.id = c.sender_id
+        where c.conversation_id = #{conversationId}
+          and (#{beforeId} is null or c.id &lt; #{beforeId})
+        order by c.id desc
+        limit #{limit}
+    </select>
+
+    <select id="selectMaxMsgId" resultType="java.lang.Long">
+        select max(id) from chat_messages where conversation_id = #{conversationId}
+    </select>
+
+    <update id="markRead">
+        update conversation_members
+        set last_read_msg_id = #{lastReadMsgId}
+        where conversation_id = #{conversationId} and user_id = #{userId}
+    </update>
+
+    <select id="selectUnread" resultType="com.xuziran.livechat.model.vo.UnreadStat">
+        select m.conversation_id, count(*) as `count`
+        from chat_messages m
+        join conversation_members me
+             on me.conversation_id = m.conversation_id and me.user_id = #{userId}
+        where me.last_read_msg_id &lt; m.id and m.sender_id &lt;&gt; #{userId}
+        group by m.conversation_id
+    </select>
+
+    <update id="updateConversation">
+        update conversations
+        <set>
+            <if test="name != null">name=#{name},</if>
+            <if test="avatar != null">avatar=#{avatar},</if>
+            <if test="notice != null">notice=#{notice},</if>
+            update_time=now()
+        </set>
+        where id=#{conversationId}
+    </update>
+
+    <update id="updateRecalled">
+        update chat_messages
+        set recalled = 1
+        where id = #{messageId} and sender_id = #{userId} and recalled = 0
+          and send_time &gt; date_sub(now(), interval 2 minute)
+    </update>
+
+</mapper>

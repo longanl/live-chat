@@ -2,6 +2,7 @@ package com.xuziran.livechat.service;
 
 import com.xuziran.livechat.model.dto.CreateGroupDTO;
 import com.xuziran.livechat.model.dto.MemberIdsDTO;
+import com.xuziran.livechat.model.dto.UpdateGroupDTO;
 import com.xuziran.livechat.model.entity.User;
 import com.xuziran.livechat.model.vo.ConversationVO;
 
@@ -33,4 +34,7 @@ public interface ConversationService {
 
     /** 踢出成员（仅群主可操作，不能踢自己，目标必须为群成员） */
     void kickMember(Long conversationId, Long operatorId, Long targetUserId);
+
+    /** 修改群信息（仅群主） */
+    void updateGroupInfo(Long conversationId, Long operatorId, UpdateGroupDTO dto);
 }

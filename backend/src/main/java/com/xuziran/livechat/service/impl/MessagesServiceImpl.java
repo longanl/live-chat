@@ -15,6 +15,7 @@ import com.xuziran.livechat.service.MessagesService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,9 +134,14 @@ public class MessagesServiceImpl implements MessagesService {
                 .fileName(dto.getFileName())
                 .fileSize(dto.getFileSize())
                 .fileType(dto.getFileType())
+                .clientMsgId(dto.getClientMsgId())
                 .sendTime(LocalDateTime.now())
                 .build();
-        messagesMapper.insertMessage(chatMessage);
+        try {
+            messagesMapper.insertMessage(chatMessage);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException("该消息已发送过（clientMsgId 重复）");
+        }
 
         MessageVO vo = new MessageVO();
         BeanUtils.copyProperties(chatMessage, vo);
@@ -167,6 +173,15 @@ public class MessagesServiceImpl implements MessagesService {
                 }
                 messagingTemplate.convertAndSendToUser(member.getId().toString(), Constant.MESSAGES_QUEUE, vo);
             }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void recall(Long messageId, Long userId) {
+        int updated = messagesMapper.updateRecalled(messageId, userId);
+        if (updated == 0) {
+            throw new BusinessException("无法撤回该消息（仅发送者可撤回发送后2分钟内的消息）");
         }
     }
 

@@ -39,4 +39,7 @@ public interface MessagesService {
 
     /** 当前用户的未读统计 */
     List<UnreadStat> unread(Long userId);
+
+    /** 撤回消息（仅发送者、发送后2分钟内） */
+    void recall(Long messageId, Long userId);
 }

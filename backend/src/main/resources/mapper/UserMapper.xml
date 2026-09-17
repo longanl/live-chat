@@ -58,6 +58,9 @@
                          where r.from_user_id = #{userId} and r.to_user_id = u.id and r.status = 0) then 'REQUEST_SENT'
             when exists (select 1 from friend_requests r
                          where r.from_user_id = u.id and r.to_user_id = #{userId} and r.status = 0) then 'REQUEST_RECEIVED'
+            when exists (select 1 from user_blocks ub
+                         where (ub.blocker_id = #{userId} and ub.blocked_id = u.id)
+                            or (ub.blocked_id = #{userId} and ub.blocker_id = u.id)) then 'BLOCKED'
             else 'NONE'
         end as relation
     </sql>

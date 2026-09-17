@@ -4,6 +4,7 @@ import com.xuziran.livechat.common.exception.BusinessException;
 import com.xuziran.livechat.mapper.MessagesMapper;
 import com.xuziran.livechat.model.dto.CreateGroupDTO;
 import com.xuziran.livechat.model.dto.MemberIdsDTO;
+import com.xuziran.livechat.model.dto.UpdateGroupDTO;
 import com.xuziran.livechat.model.entity.Conversation;
 import com.xuziran.livechat.model.entity.User;
 import com.xuziran.livechat.model.vo.ConversationVO;
@@ -120,6 +121,17 @@ public class ConversationServiceImpl implements ConversationService {
         }
         messagesMapper.deleteMember(conversationId, targetUserId);
         log.info("踢出群成员 conversationId={} operator={} target={}", conversationId, operatorId, targetUserId);
+    }
+
+    @Override
+    @Transactional
+    public void updateGroupInfo(Long conversationId, Long operatorId, UpdateGroupDTO dto) {
+        Conversation conversation = requireGroup(conversationId);
+        if (conversation.getOwnerId() == null || !conversation.getOwnerId().equals(operatorId)) {
+            throw new BusinessException("仅群主可以修改群信息");
+        }
+        messagesMapper.updateConversation(conversationId, dto.getName(), dto.getAvatar(), dto.getNotice());
+        log.info("修改群信息 conversationId={} operator={} name={}", conversationId, operatorId, dto.getName());
     }
 
     /** 去重并剔除 null / 自身，避免批量 insert 出现重复值与脏数据 */

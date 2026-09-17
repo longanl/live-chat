@@ -217,7 +217,7 @@ GET /user/search?keyword={keyword}&page={page}&size={size}
 }
 ```
 
-**`relation` 取值**：`NONE`（陌生人）/ `FRIEND`（好友）/ `REQUEST_SENT`（已发请求）/ `REQUEST_RECEIVED`（对方已发请求）。`BLOCKED` 待拉黑功能（见 2.7）实现后补充。
+**`relation` 取值**：`NONE`（陌生人）/ `FRIEND`（好友）/ `REQUEST_SENT`（已发请求）/ `REQUEST_RECEIVED`（对方已发请求）/ `BLOCKED`（已拉黑）。
 
 > 仅能搜到本人以外的用户；`keyword` 必填。已在 `/friends/add` 场景替代“手动输用户名找好友”。
 
@@ -243,12 +243,13 @@ GET /user/{id}
     "nickname": "鲍勃",
     "avatar": "http://...",
     "status": 1,
+    "signature": "个性签名",
     "relation": "FRIEND"
   }
 }
 ```
 
-> 暂无 `signature` 字段（`users` 表未加列，待补充）；`relation` 取值同 1.7。
+> `signature` 取自 `users` 表；`relation` 取值同 1.7。
 
 ---
 
@@ -407,7 +408,7 @@ GET /friends/require
 
 ---
 
-### 2.7 拉黑用户 🆕
+### 2.7 拉黑用户 ✅
 
 ```
 POST /friends/block
@@ -422,9 +423,11 @@ Content-Type: application/json
 
 **响应**：`Result<Void>`
 
+> 仅限好友可拉黑；拉黑后搜索/详情的 `relation` 返回 `BLOCKED`。
+
 ---
 
-### 2.8 取消拉黑 🆕
+### 2.8 取消拉黑 ✅
 
 ```
 DELETE /friends/block/{userId}
@@ -436,7 +439,7 @@ DELETE /friends/block/{userId}
 
 ---
 
-### 2.9 拉黑列表 🆕
+### 2.9 拉黑列表 ✅
 
 ```
 GET /friends/blocked?page={page}&size={size}
@@ -601,7 +604,7 @@ Content-Type: application/json
 
 ---
 
-### 3.8 修改群信息 🆕
+### 3.8 修改群信息 ✅
 
 ```
 PUT /conversations/{id}
@@ -620,7 +623,7 @@ Content-Type: application/json
 
 **响应**：`Result<Void>`
 
-> 权限：仅群主 / 管理员。
+> 权限：仅群主（管理员角色暂无）。
 
 ---
 
@@ -749,12 +752,11 @@ Content-Type: application/json
 
 **响应**：`Result<MessageVO>`
 
-> 发送者身份取自 JWT；需为会话成员，非成员返回业务失败。文件消息判定同 WS（`messageType=2` 且 `fileUrl` 非空）。
-> `clientMsgId` 必填（幂等标识），当前仅校验必填，幂等去重待表结构支持后实现。
+> `clientMsgId` 必填（会话内唯一，重复返回业务失败）；发送者身份取自 JWT；需为会话成员，非成员返回业务失败。文件消息判定同 WS（`messageType=2` 且 `fileUrl` 非空）。
 
 ---
 
-### 4.5 撤回消息 🆕
+### 4.5 撤回消息 ✅
 
 ```
 POST /messages/{id}/recall
@@ -764,7 +766,8 @@ POST /messages/{id}/recall
 
 **响应**：`Result<Void>`
 
-> 规则建议：仅发送者本人、发送后 2 分钟内可撤回。
+> 规则：仅发送者本人、发送后 2 分钟内可撤回；撤回后在历史消息中标记 `recalled`。
+> 同一 `clientMsgId` 在同一会话内唯一（数据库唯一索引），重复发送会返回业务失败。
 
 ---
 
@@ -981,6 +984,7 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 | 5 | 会话/好友/成员列表无分页 | `/conversations`、`/friends/list`、`/conversations/{id}/members` | 数据量大时补分页 |
 
 > 已修复：`GET /user/logout` → `POST /user/logout`；`/uploadavatar687` → `/user/avatar` 并加入拦截器白名单；文件上传 `Content-Type` 已为 `multipart/form-data`。
+> 阶段二新增：`users.signature`、`conversations.avatar/notice`、`chat_messages.client_msg_id/recalled`（含 `(conversation_id,client_msg_id)` 唯一索引）；`user_blocks` 表；拉黑、撤回、群信息修改均已实现。
 
 ---
 
@@ -1002,9 +1006,9 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 | 好友 | POST | /friends/delete | 删除好友 | ✅ |
 | 好友 | GET | /friends/list | 好友列表 | ✅ |
 | 好友 | GET | /friends/require | 待处理好友请求 | ✅ |
-| 好友 | POST | /friends/block | 拉黑 | 🆕 |
-| 好友 | DELETE | /friends/block/{userId} | 取消拉黑 | 🆕 |
-| 好友 | GET | /friends/blocked | 拉黑列表 | 🆕 |
+| 好友 | POST | /friends/block | 拉黑 | ✅ |
+| 好友 | DELETE | /friends/block/{userId} | 取消拉黑 | ✅ |
+| 好友 | GET | /friends/blocked | 拉黑列表 | ✅ |
 | 会话 | GET | /conversations | 我的会话列表 | ✅ |
 | 会话 | GET | /conversations/{id} | 会话详情 | ✅ |
 | 会话 | GET | /conversations/{id}/members | 成员列表 | ✅ |
@@ -1012,13 +1016,13 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 | 会话 | DELETE | /conversations/{id}/members/me | 退出群聊 | ✅ |
 | 会话 | POST | /conversations/group | 创建群聊 | ✅ |
 | 会话 | POST | /conversations/private | 创建/获取私聊 | ✅ |
-| 会话 | PUT | /conversations/{id} | 修改群信息 | 🆕 |
+| 会话 | PUT | /conversations/{id} | 修改群信息 | ✅ |
 | 会话 | DELETE | /conversations/{id}/members/{userId} | 踢人 | ✅ |
 | 消息 | GET | /messages/history | 历史消息 | ✅ |
 | 消息 | POST | /messages/read | 标记已读 | ✅ |
 | 消息 | GET | /messages/unread | 未读数统计 | ✅ |
 | 消息 | POST | /messages/send | HTTP 发送消息 | ✅ |
-| 消息 | POST | /messages/{id}/recall | 撤回消息 | 🆕 |
+| 消息 | POST | /messages/{id}/recall | 撤回消息 | ✅ |
 | 消息 | DELETE | /messages/{id} | 删除消息 | 🆕 |
 | 文件 | POST | /files/upload | 上传聊天文件 | ✅ |
 | WS | CONNECT | /ws | 建立连接（header `token`） | ✅ |

@@ -4,6 +4,7 @@ import com.xuziran.livechat.common.context.BaseContext;
 import com.xuziran.livechat.model.dto.CreateGroupDTO;
 import com.xuziran.livechat.model.dto.MemberIdsDTO;
 import com.xuziran.livechat.model.dto.PrivateChatDTO;
+import com.xuziran.livechat.model.dto.UpdateGroupDTO;
 import com.xuziran.livechat.model.entity.User;
 import com.xuziran.livechat.model.vo.ConversationVO;
 import com.xuziran.livechat.common.result.Result;
@@ -67,12 +68,21 @@ public class ConversationController {
         return Result.success(messagesService.createPrivateConversation(userId, dto.getTargetUserId()));
     }
 
-    @DeleteMapping("/{id}/members/{userId}")
+@DeleteMapping("/{id}/members/{userId}")
     @Operation(summary = "踢出成员（仅群主，不能踢自己）")
     public Result kick(@PathVariable Long id, @PathVariable Long userId) {
         Long operatorId = BaseContext.getCurrentId();
         log.info("踢出群成员 conversationId={} operator={} target={}", id, operatorId, userId);
         conversationService.kickMember(id, operatorId, userId);
+        return Result.success();
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "修改群信息（仅群主）")
+    public Result updateGroup(@PathVariable Long id, @RequestBody UpdateGroupDTO dto) {
+        Long operatorId = BaseContext.getCurrentId();
+        log.info("修改群信息 conversationId={} operator={}", id, operatorId);
+        conversationService.updateGroupInfo(id, operatorId, dto);
         return Result.success();
     }
 
