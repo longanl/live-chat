@@ -1,63 +1,78 @@
 services:
-  services:
-    web:
-      image: ghcr.io/yourname/live-chat-web:${TAG:-latest}
-      build: ./frontend
-      ports:
-        - "80:80"
-      depends_on:
-        - backend
-      restart: unless-stopped
-      mem_limit: 96m
-      volumes:
-        - pic-bed:/var/www/pic_bed:ro
-      networks: [ app ]
+  web:
+    image: ghcr.io/yourname/live-chat-web:${TAG:-latest}
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    mem_limit: 96m
+    volumes:
+      - pic-bed:/var/www/pic_bed:ro
+    networks: [app]
 
-    backend:
-      image: ghcr.io/yourname/live-chat-backend:${TAG:-latest}
-      build: ./backend
-      restart: unless-stopped
-      mem_limit: 640m
-      environment:
-        TZ: Asia/Shanghai
+  backend:
+    image: ghcr.io/yourname/live-chat-backend:${TAG:-latest}
+    build: ./backend
+    restart: unless-stopped
+    mem_limit: 640m
+    environment:
+      TZ: Asia/Shanghai
 
-        # ---- 外置 MySQL，不要放这台 2G 机器 ----
-        MYSQL_HOST: "10.0.0.5"
-        MYSQL_PORT: "3306"
-        MYSQL_DATABASE: "live_chat"
-        MYSQL_USERNAME: "livechat"
-        MYSQL_PASSWORD: "改我"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: live_chat
+      MYSQL_USERNAME: livechat
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
 
-        # ---- JWT ----
-        JWT_TOKEN_NAME: "token"
-        JWT_SECRET: "改我，至少 32 字节随机串"
+      JWT_TOKEN_NAME: token
+      JWT_SECRET: ${JWT_SECRET}
 
-        # ---- 图床：与 web 容器的 /files/ 对外路径必须一致 ----
-        UPLOAD_PATH: "/var/www/pic_bed"
-        UPLOAD_DOMAIN: "http://你的服务器IP或域名/files/"
+      UPLOAD_PATH: /var/www/pic_bed
+      UPLOAD_DOMAIN: http://你的服务器IP或域名/files/
 
-        # ---- Swagger（如确实要改路径）----
-        SPRINGDOC_API_DOCS_PATH: "/api-docs"
-        SPRINGDOC_SWAGGER_UI_PATH: "/docs"
+      SPRINGDOC_API_DOCS_PATH: /api-docs
+      SPRINGDOC_SWAGGER_UI_PATH: /docs
 
-        # ---- JVM：2G 机器关键 ----
-        JAVA_TOOL_OPTIONS: >-
-          -XX:MaxRAMPercentage=70
-          -XX:+UseSerialGC
-          -XX:+ExitOnOutOfMemoryError
-          -Duser.timezone=Asia/Shanghai
+      JAVA_TOOL_OPTIONS: >-
+        -XX:MaxRAMPercentage=70
+        -XX:+UseSerialGC
+        -XX:+ExitOnOutOfMemoryError
+        -Duser.timezone=Asia/Shanghai
 
-      volumes:
-        - pic-bed:/var/www/pic_bed
-      networks: [ app ]
+    volumes:
+      - pic-bed:/var/www/pic_bed
+    networks: [app]
+    depends_on:
+      - mysql
 
-  volumes:
-    pic-bed:
-      driver: local
-      driver_opts:
-        type: none
-        o: bind
-        device: /opt/live-chat/pic_bed     # 宿主机真实目录
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: livechat
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: live_chat
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/src/main/resources/chat.sql:/docker-entrypoint-initdb.d/chat.sql:ro
+    ports:
+      - "3306:3306"
+    networks: [app]
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
-  networks:
-    app:
+volumes:
+  pic-bed:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/live-chat/pic_bed
+  mysql-data:
+
+networks:
+  app:
