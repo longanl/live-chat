@@ -132,10 +132,7 @@ function onMemberPageChange(page: number, size: number): void {
           />
         </div>
       </div>
-        </li>
-      </ul>
     </div>
-  </div>
 </template>
 
 <style scoped>
