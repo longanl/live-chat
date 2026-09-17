@@ -179,7 +179,7 @@ Content-Type: multipart/form-data
 
 ---
 
-### 1.7 搜索用户 🆕
+### 1.7 搜索用户 ✅
 
 ```
 GET /user/search?keyword={keyword}&page={page}&size={size}
@@ -217,13 +217,13 @@ GET /user/search?keyword={keyword}&page={page}&size={size}
 }
 ```
 
-**`relation` 取值**：`NONE`（陌生人）/ `FRIEND`（好友）/ `REQUEST_SENT`（已发请求）/ `REQUEST_RECEIVED`（对方已发请求）/ `BLOCKED`
+**`relation` 取值**：`NONE`（陌生人）/ `FRIEND`（好友）/ `REQUEST_SENT`（已发请求）/ `REQUEST_RECEIVED`（对方已发请求）。`BLOCKED` 待拉黑功能（见 2.7）实现后补充。
 
-> 说明：没有这个接口，`/friends/add` 只能靠用户手动输用户名，体验较差。
+> 仅能搜到本人以外的用户；`keyword` 必填。已在 `/friends/add` 场景替代“手动输用户名找好友”。
 
 ---
 
-### 1.8 查看用户详情 🆕
+### 1.8 查看用户详情 ✅
 
 ```
 GET /user/{id}
@@ -243,11 +243,12 @@ GET /user/{id}
     "nickname": "鲍勃",
     "avatar": "http://...",
     "status": 1,
-    "signature": "个性签名",
     "relation": "FRIEND"
   }
 }
 ```
+
+> 暂无 `signature` 字段（`users` 表未加列，待补充）；`relation` 取值同 1.7。
 
 ---
 
@@ -581,7 +582,7 @@ Content-Type: application/json
 
 ---
 
-### 3.7 创建 / 获取私聊会话 🆕
+### 3.7 创建 / 获取私聊会话 ✅
 
 ```
 POST /conversations/private
@@ -596,7 +597,7 @@ Content-Type: application/json
 
 **响应**：`Result<Long>`（会话 ID，已存在则直接返回已有会话）
 
-> 当前私聊会话在首次发送 WebSocket 消息时惰性创建（见 `/app/chat.p2p`），无独立 HTTP 创建接口。
+> 仅限好友；复用首次发送 WebSocket 私聊消息时惰性创建的会话。
 
 ---
 
@@ -623,7 +624,7 @@ Content-Type: application/json
 
 ---
 
-### 3.9 踢出成员 🆕
+### 3.9 踢出成员 ✅
 
 ```
 DELETE /conversations/{id}/members/{userId}
@@ -638,7 +639,7 @@ DELETE /conversations/{id}/members/{userId}
 
 **响应**：`Result<Void>`
 
-> 权限：仅群主 / 管理员，不能踢自己。
+> 权限：当前仅「群主」可踢（管理员角色暂无），不能踢自己。
 
 ---
 
@@ -726,7 +727,7 @@ GET /messages/unread
 
 ---
 
-### 4.4 HTTP 发送消息（兜底）🆕
+### 4.4 HTTP 发送消息（兜底）✅
 
 ```
 POST /messages/send
@@ -748,7 +749,8 @@ Content-Type: application/json
 
 **响应**：`Result<MessageVO>`
 
-> 当前发送消息**只有 WebSocket 通道**，无 HTTP 兜底接口。
+> 发送者身份取自 JWT；需为会话成员，非成员返回业务失败。文件消息判定同 WS（`messageType=2` 且 `fileUrl` 非空）。
+> `clientMsgId` 必填（幂等标识），当前仅校验必填，幂等去重待表结构支持后实现。
 
 ---
 
@@ -977,7 +979,6 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 | 3 | 枚举值无 OpenAPI 说明 | `status`、`type`、`messageType`、`FriendRequest.status` | 加 `@Schema(allowableValues=...)` 或改用 Java enum |
 | 4 | `/messages/read` 无法只读到某条 | `/messages/read` | 增加可选 `lastReadMessageId` |
 | 5 | 会话/好友/成员列表无分页 | `/conversations`、`/friends/list`、`/conversations/{id}/members` | 数据量大时补分页 |
-| 6 | 无 HTTP 发送消息兜底 | 消息发送 | 补 `POST /messages/send` |
 
 > 已修复：`GET /user/logout` → `POST /user/logout`；`/uploadavatar687` → `/user/avatar` 并加入拦截器白名单；文件上传 `Content-Type` 已为 `multipart/form-data`。
 
@@ -993,8 +994,8 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 | 用户 | PUT | /user/modifyPassword | 修改密码 | ✅ |
 | 用户 | POST | /user/updateProfile | 更新资料 | ✅ |
 | 用户 | POST | /user/avatar | 上传头像（免登录） | ✅ |
-| 用户 | GET | /user/search | 搜索用户 | 🆕 |
-| 用户 | GET | /user/{id} | 用户详情 | 🆕 |
+| 用户 | GET | /user/search | 搜索用户 | ✅ |
+| 用户 | GET | /user/{id} | 用户详情 | ✅ |
 | 好友 | POST | /friends/add | 添加好友 | ✅ |
 | 好友 | POST | /friends/approve | 审批请求 | ✅ |
 | 好友 | POST | /friends/reject | 拒绝请求 | ✅ |
@@ -1010,13 +1011,13 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 | 会话 | POST | /conversations/{id}/members | 邀请成员 | ✅ |
 | 会话 | DELETE | /conversations/{id}/members/me | 退出群聊 | ✅ |
 | 会话 | POST | /conversations/group | 创建群聊 | ✅ |
-| 会话 | POST | /conversations/private | 创建/获取私聊 | 🆕 |
+| 会话 | POST | /conversations/private | 创建/获取私聊 | ✅ |
 | 会话 | PUT | /conversations/{id} | 修改群信息 | 🆕 |
-| 会话 | DELETE | /conversations/{id}/members/{userId} | 踢人 | 🆕 |
+| 会话 | DELETE | /conversations/{id}/members/{userId} | 踢人 | ✅ |
 | 消息 | GET | /messages/history | 历史消息 | ✅ |
 | 消息 | POST | /messages/read | 标记已读 | ✅ |
 | 消息 | GET | /messages/unread | 未读数统计 | ✅ |
-| 消息 | POST | /messages/send | HTTP 发送消息 | 🆕 |
+| 消息 | POST | /messages/send | HTTP 发送消息 | ✅ |
 | 消息 | POST | /messages/{id}/recall | 撤回消息 | 🆕 |
 | 消息 | DELETE | /messages/{id} | 删除消息 | 🆕 |
 | 文件 | POST | /files/upload | 上传聊天文件 | ✅ |

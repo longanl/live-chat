@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.xuziran.livechat.mapper.UserMapper">
+    <insert id="insert">
+        insert into users(username,password,avatar,nickname,status,create_time,update_time)
+        values(#{username},#{password},#{avatar},#{nickname},0,now(),now())
+    </insert>
+    <update id="updateStatus">
+        update users set status=1,update_time=now() where username=#{username}
+    </update>
+    <update id="update">
+        update users
+        <set>
+            <if test="username != null">
+                username=#{username},
+            </if>
+            <if test="password != null">
+                password= #{password},
+            </if>
+            <if test="nickname != null">
+                nickname= #{nickname},
+            </if>
+            <if test="avatar != null">
+                avatar= #{avatar},
+            </if>
+            <if test="status != null">
+                status= #{status},
+            </if>
+            update_time=now()
+        </set>
+        where id=#{id}
+    </update>
+
+    <select id="login" resultType="com.xuziran.livechat.model.entity.User">
+        select * from users where username=#{username}
+    </select>
+    <select id="queryOnlineUser" resultType="com.xuziran.livechat.model.entity.User">
+        select id, username, nickname, avatar, status from users where status=1
+    </select>
+    <select id="getIdByUsername" resultType="java.lang.Long">
+        select id from users where username=#{username}
+    </select>
+    <select id="getById" resultType="com.xuziran.livechat.model.entity.User">
+        select * from users where id=#{id}
+    </select>
+    <select id="count" resultType="java.lang.Long">
+        select count(*) from users
+    </select>
+
+    <sql id="relationCase">
+        case
+            when exists (select 1 from friend_relations fr
+                         where fr.user_id = least(#{userId}, u.id)
+                           and fr.friend_id = greatest(#{userId}, u.id)) then 'FRIEND'
+            when exists (select 1 from friend_requests r
+                         where r.from_user_id = #{userId} and r.to_user_id = u.id and r.status = 0) then 'REQUEST_SENT'
+            when exists (select 1 from friend_requests r
+                         where r.from_user_id = u.id and r.to_user_id = #{userId} and r.status = 0) then 'REQUEST_RECEIVED'
+            else 'NONE'
+        end as relation
+    </sql>
+
+    <select id="countSearch" resultType="java.lang.Long">
+        select count(*)
+        from users u
+        where u.id &lt;&gt; #{userId}
+          and (u.username like concat('%', #{keyword}, '%')
+               or u.nickname like concat('%', #{keyword}, '%'))
+    </select>
+
+    <select id="selectSearch" resultType="com.xuziran.livechat.model.vo.UserSearchVO">
+        select u.id, u.username, u.nickname, u.avatar, u.status,
+        <include refid="relationCase"/>
+        from users u
+        where u.id &lt;&gt; #{userId}
+          and (u.username like concat('%', #{keyword}, '%')
+               or u.nickname like concat('%', #{keyword}, '%'))
+        order by u.id
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="selectUserDetail" resultType="com.xuziran.livechat.model.vo.UserDetailVO">
+        select u.id, u.username, u.nickname, u.avatar, u.status,
+        <include refid="relationCase"/>
+        from users u
+        where u.id = #{id}
+    </select>
+
+</mapper>

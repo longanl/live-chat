@@ -7,6 +7,8 @@ public class Constant {
     public static final String P2P = "p2pchat";
     public static final String MESSAGES_QUEUE = "/queue/messages";
     public static final String PRESENCE_SNAPSHOT_QUEUE = "/queue/presence";
+    /** 群聊消息广播主题前缀（拼上 conversationId 即完整主题） */
+    public static final String TOPIC_CONVERSATION_PREFIX = "/topic/conv/";
     /** 业务异常定向提示队列（如非好友私聊），避免抛 ERROR 帧导致客户端断连 */
     public static final String ERROR_QUEUE = "/queue/errors";
 }

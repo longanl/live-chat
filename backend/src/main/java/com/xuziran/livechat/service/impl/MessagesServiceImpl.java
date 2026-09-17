@@ -4,15 +4,22 @@ import com.xuziran.livechat.common.constant.Constant;
 import com.xuziran.livechat.common.exception.BusinessException;
 import com.xuziran.livechat.mapper.FriendsMapper;
 import com.xuziran.livechat.mapper.MessagesMapper;
+import com.xuziran.livechat.mapper.UserMapper;
+import com.xuziran.livechat.model.dto.MessageDTO;
+import com.xuziran.livechat.model.entity.ChatMessage;
 import com.xuziran.livechat.model.entity.Conversation;
+import com.xuziran.livechat.model.entity.User;
 import com.xuziran.livechat.model.vo.MessageVO;
 import com.xuziran.livechat.model.vo.UnreadStat;
 import com.xuziran.livechat.service.MessagesService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,7 +27,7 @@ import java.util.List;
 @Slf4j
 public class MessagesServiceImpl implements MessagesService {
 
-    /** 内置群会话默认 ID（chat.sql 固定为 1） */
+    /** 内置群会话默认 ID（init.sql 固定为 1） */
     private static final Long GROUP_CONVERSATION_ID = 1L;
     private static final Integer CONVERSATION_TYPE_GROUP = 2;
     private static final Integer CONVERSATION_TYPE_P2P = 1;
@@ -30,6 +37,12 @@ public class MessagesServiceImpl implements MessagesService {
 
     @Autowired
     private FriendsMapper friendsMapper;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @Override
     public List<MessageVO> queryByConversation(Long conversationId, Long beforeId, Integer limit, Long userId) {
@@ -89,6 +102,72 @@ public class MessagesServiceImpl implements MessagesService {
         // 防越权：必须是该群成员才能发言
         requireMember(conversationId, senderId);
         return conversationId;
+    }
+
+    @Override
+    @Transactional
+    public Long createPrivateConversation(Long userId, Long targetUserId) {
+        if (targetUserId == null) {
+            throw new BusinessException("缺少对方用户ID");
+        }
+        // 复用私聊会话解析：仅限好友，不存在则创建并补齐双方成员
+        return resolveConversation(Constant.P2P, userId, targetUserId);
+    }
+
+    @Override
+    @Transactional
+    public MessageVO saveMessage(Long senderId, Long conversationId, MessageDTO dto) {
+        if (conversationId == null || dto == null) {
+            throw new BusinessException("参数不完整");
+        }
+        requireMember(conversationId, senderId);
+        User user = userMapper.getById(senderId);
+        boolean isFile = Constant.MESSAGE_TYPE_FILE.equals(dto.getMessageType())
+                && dto.getFileUrl() != null && !dto.getFileUrl().isBlank();
+        ChatMessage chatMessage = ChatMessage.builder()
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .messageType(isFile ? Constant.MESSAGE_TYPE_FILE : Constant.MESSAGE_TYPE_TEXT)
+                .content(dto.getContent())
+                .fileUrl(dto.getFileUrl())
+                .fileName(dto.getFileName())
+                .fileSize(dto.getFileSize())
+                .fileType(dto.getFileType())
+                .sendTime(LocalDateTime.now())
+                .build();
+        messagesMapper.insertMessage(chatMessage);
+
+        MessageVO vo = new MessageVO();
+        BeanUtils.copyProperties(chatMessage, vo);
+        if (user != null) {
+            vo.setNickname(user.getNickname());
+            vo.setAvatar(user.getAvatar());
+        }
+        return vo;
+    }
+
+    @Override
+    public void broadcastMessage(MessageVO vo) {
+        if (vo.getConversationId() == null) {
+            return;
+        }
+        Conversation conversation = messagesMapper.selectConversationById(vo.getConversationId());
+        if (conversation == null) {
+            return;
+        }
+        if (CONVERSATION_TYPE_GROUP.equals(conversation.getType())) {
+            // 群聊：实时在线订阅方广播
+            messagingTemplate.convertAndSend(Constant.TOPIC_CONVERSATION_PREFIX + vo.getConversationId(), vo);
+        } else {
+            // 私聊：发给双方成员（含发送者自身回显），与 WS 通道行为一致
+            List<User> members = messagesMapper.selectConversationMembers(vo.getConversationId());
+            for (User member : members) {
+                if (member.getId() == null) {
+                    continue;
+                }
+                messagingTemplate.convertAndSendToUser(member.getId().toString(), Constant.MESSAGES_QUEUE, vo);
+            }
+        }
     }
 
     @Override
