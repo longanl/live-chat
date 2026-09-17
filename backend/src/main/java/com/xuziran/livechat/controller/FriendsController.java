@@ -34,7 +34,7 @@ public class FriendsController {
     }
     @GetMapping("/require")
     @Operation(summary = "查询未处理的好友请求（当前登录用户）")
-    public Result<List<User>> list0() {
+    public Result<List<User>> pending() {
         Long userId = BaseContext.getCurrentId();
         log.info("查询未处理的好友请求 userId={}", userId);
         List<User> list = friendsService.listRequest(userId);
@@ -43,7 +43,7 @@ public class FriendsController {
 
     @PostMapping("/add")
     @Operation(summary = "添加好友")
-    public Result add(@RequestBody AddFriendDTO addFriendDTO) {
+    public Result<Void> add(@RequestBody AddFriendDTO addFriendDTO) {
         Long userId = BaseContext.getCurrentId();
         log.info("添加好友 userId={} friendUsername={}", userId, addFriendDTO.getFriendUsername());
         friendsService.add(userId, addFriendDTO.getFriendUsername());
@@ -51,7 +51,7 @@ public class FriendsController {
     }
     @PostMapping("/approve")
     @Operation(summary = "审批好友请求")
-    public Result approve(@RequestBody RelationshipDTO relationshipDTO) {
+    public Result<Void> approve(@RequestBody RelationshipDTO relationshipDTO) {
         Long userId = BaseContext.getCurrentId();
         log.info("审批好友请求 userId={} friendId={}", userId, relationshipDTO.getFriendId());
         friendsService.approve(userId, relationshipDTO.getFriendId());
@@ -59,7 +59,7 @@ public class FriendsController {
     }
     @PostMapping("/reject")
     @Operation(summary = "拒绝好友请求")
-    public Result reject(@RequestBody RelationshipDTO relationshipDTO) {
+    public Result<Void> reject(@RequestBody RelationshipDTO relationshipDTO) {
         Long userId = BaseContext.getCurrentId();
         log.info("拒绝好友请求 userId={} friendId={}", userId, relationshipDTO.getFriendId());
         friendsService.reject(userId, relationshipDTO.getFriendId());
@@ -67,7 +67,7 @@ public class FriendsController {
     }
     @PostMapping("/delete")
     @Operation(summary = "删除好友")
-    public Result delete(@RequestBody RelationshipDTO relationshipDTO) {
+    public Result<Void> delete(@RequestBody RelationshipDTO relationshipDTO) {
         Long userId = BaseContext.getCurrentId();
         log.info("删除好友 userId={} friendId={}", userId, relationshipDTO.getFriendId());
         friendsService.delete(userId, relationshipDTO.getFriendId());
@@ -76,7 +76,7 @@ public class FriendsController {
 
     @PostMapping("/block")
     @Operation(summary = "拉黑用户")
-    public Result block(@RequestBody RelationshipDTO dto) {
+    public Result<Void> block(@RequestBody RelationshipDTO dto) {
         Long userId = BaseContext.getCurrentId();
         log.info("拉黑 userId={} target={}", userId, dto.getFriendId());
         friendsService.block(userId, dto.getFriendId());
@@ -85,7 +85,7 @@ public class FriendsController {
 
     @DeleteMapping("/block/{userId}")
     @Operation(summary = "取消拉黑")
-    public Result unblock(@PathVariable Long userId) {
+    public Result<Void> unblock(@PathVariable Long userId) {
         Long me = BaseContext.getCurrentId();
         log.info("取消拉黑 me={} target={}", me, userId);
         friendsService.unblock(me, userId);

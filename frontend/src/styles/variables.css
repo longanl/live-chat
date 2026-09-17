@@ -1,0 +1,49 @@
+/**
+ * 设计 token：全站唯一的颜色/尺寸来源。
+ * 同时覆盖 Element Plus 主色，保证组件库与自研组件观感一致。
+ */
+:root {
+  /* 品牌色 */
+  --lc-primary: #2b79f5;
+  --lc-primary-hover: #1f6ae0;
+  --lc-primary-soft: #eaf2ff;
+
+  /* 背景与表面 */
+  --lc-bg: #f0f2f5;
+  --lc-surface: #ffffff;
+  --lc-surface-2: #f6f7f9;
+  --lc-surface-3: #eceef2;
+
+  /* 文本 */
+  --lc-text: #1f2329;
+  --lc-text-2: #646a73;
+  --lc-text-3: #9aa0a8;
+
+  /* 线条与状态色 */
+  --lc-border: #e8ebf0;
+  --lc-border-strong: #dcdfe6;
+  --lc-success: #34c724;
+  --lc-danger: #f54a45;
+
+  /* 尺寸 */
+  --lc-header-h: 56px;
+  --lc-list-w: 300px;
+  --lc-info-w: 280px;
+  --lc-radius-sm: 6px;
+  --lc-radius: 10px;
+  --lc-radius-lg: 14px;
+
+  /* 阴影 */
+  --lc-shadow-sm: 0 1px 4px rgba(31, 35, 41, 0.06);
+  --lc-shadow: 0 4px 16px rgba(31, 35, 41, 0.08);
+
+  /* 覆盖 Element Plus 主色，避免默认 #409eff 与品牌色冲突 */
+  --el-color-primary: var(--lc-primary);
+  --el-color-primary-light-3: #6ba0f8;
+  --el-color-primary-light-5: #95b9fa;
+  --el-color-primary-light-7: #c0d5fc;
+  --el-color-primary-light-8: #d5e3fd;
+  --el-color-primary-light-9: var(--lc-primary-soft);
+  --el-color-primary-dark-2: var(--lc-primary-hover);
+  --el-border-radius-base: var(--lc-radius-sm);
+}

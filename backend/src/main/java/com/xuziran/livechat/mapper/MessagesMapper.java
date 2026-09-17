@@ -39,16 +39,16 @@ public interface MessagesMapper {
     /** 我的会话总数 */
     Long countMyConversations(@Param("userId") Long userId);
 
-    /** 会话成员列表（含在线状态） */
+    /** 会话成员列表（含在线状态，分页） */
     List<User> selectConversationMembers(@Param("conversationId") Long conversationId,
                                                                   @Param("offset") Integer offset,
                                                                   @Param("size") Integer size);
 
-    /** 会话成员总数 */
-    Long countConversationMembers(@Param("conversationId") Long conversationId);
+    /** 会话全部成员（广播用，无分页） */
+    List<User> selectAllConversationMembers(@Param("conversationId") Long conversationId);
 
     /** 会话成员总数 */
-    Long selectMemberCount(@Param("conversationId") Long conversationId);
+    Long countConversationMembers(@Param("conversationId") Long conversationId);
 
     /** 批量加入成员（重复则忽略），userIds 不可为空 */
     void insertMembers(@Param("conversationId") Long conversationId,

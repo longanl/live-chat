@@ -38,7 +38,7 @@ public class MessagesController {
 
     @PostMapping("/read")
     @Operation(summary = "标记会话已读（推进游标，仅会话成员可操作）")
-    public Result markRead(@RequestBody ReadMessageDTO dto) {
+    public Result<Void> markRead(@RequestBody ReadMessageDTO dto) {
         Long userId = BaseContext.getCurrentId();
         log.info("标记已读 userId={} conversationId={}", userId, dto.getConversationId());
         messagesService.markRead(dto.getConversationId(), userId);
@@ -54,13 +54,17 @@ public class MessagesController {
         }
         log.info("HTTP 发送消息 userId={} conversationId={}", userId, dto.getConversationId());
         MessageVO vo = messagesService.saveMessage(userId, dto.getConversationId(), dto);
-        messagesService.broadcastMessage(vo);
+        try {
+            messagesService.broadcastMessage(vo);
+        } catch (Exception e) {
+            log.error("消息广播失败，消息已保存: conversationId={}, msgId={}", vo.getConversationId(), vo.getId(), e);
+        }
         return Result.success(vo);
     }
 
     @PostMapping("/{id}/recall")
     @Operation(summary = "撤回消息（仅发送者、发送后2分钟内）")
-    public Result recall(@PathVariable Long id) {
+    public Result<Void> recall(@PathVariable Long id) {
         Long userId = BaseContext.getCurrentId();
         log.info("撤回消息 userId={} messageId={}", userId, id);
         messagesService.recall(id, userId);

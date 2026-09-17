@@ -1,5 +1,6 @@
 package com.xuziran.livechat.model.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +23,7 @@ public class ConversationVO implements Serializable {
 
     private Long conversationId;
     /** 1-私聊 2-群聊 */
+    @Schema(allowableValues = {"1", "2"})
     private Integer type;
     /** 群聊名称；私聊为空 */
     private String name;
@@ -45,6 +47,7 @@ public class ConversationVO implements Serializable {
     private Long lastMessageId;
     private String lastContent;
     /** 1-文本 2-文件 */
+    @Schema(allowableValues = {"1", "2"})
     private Integer lastMessageType;
     /** 文件消息的原始文件名（用于列表预览） */
     private String lastFileName;

@@ -51,6 +51,9 @@ public class FriendsServiceImpl implements FriendsService {
         if (isFriend(userId, friendId)) {
             throw new BusinessException("你们已经是好友了");
         }
+        if (isBlocked(userId, friendId) || isBlocked(friendId, userId)) {
+            throw new BusinessException("你已拉黑该用户，无法添加");
+        }
         // 对方已经先发起了申请：直接同意入好友
         if (friendsMapper.countPendingRequest(friendId, userId) > 0) {
             friendsMapper.confirmRequest(friendId, userId);
@@ -67,6 +70,9 @@ public class FriendsServiceImpl implements FriendsService {
     @Override
     @Transactional
     public void approve(Long userId, Long friendId) {
+        if (isBlocked(userId, friendId) || isBlocked(friendId, userId)) {
+            throw new BusinessException("你们已互相拉黑，无法恢复好友关系");
+        }
         int updated = friendsMapper.confirmRequest(friendId, userId);
         if (updated == 0) {
             throw new BusinessException("没有待处理的申请");
@@ -134,7 +140,14 @@ public class FriendsServiceImpl implements FriendsService {
         return PageResult.<UserVO>of(total, page, size, list);
     }
 
-    /** 好友关系行固定 user_id < friend_id，归一化后写入 */
+    private boolean isBlocked(Long a, Long b) {
+        return friendsMapper.countBlock(a, b) > 0;
+    }
+
+    private boolean isFriend(Long a, Long b) {
+        return friendsMapper.countRelation(lowId(a, b), highId(a, b)) > 0;
+    }
+
     private void addRelation(Long a, Long b) {
         friendsMapper.insertRelation(lowId(a, b), highId(a, b));
     }
@@ -145,9 +158,5 @@ public class FriendsServiceImpl implements FriendsService {
 
     private long highId(Long a, Long b) {
         return Math.max(a, b);
-    }
-
-    private boolean isFriend(Long a, Long b) {
-        return friendsMapper.countRelation(lowId(a, b), highId(a, b)) > 0;
     }
 }

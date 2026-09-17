@@ -100,11 +100,15 @@
         limit #{size} offset #{offset}
     </select>
 
-    <select id="countConversationMembers" resultType="java.lang.Long">
-        select count(*) from conversation_members where conversation_id = #{conversationId}
+    <select id="selectAllConversationMembers" resultType="com.xuziran.livechat.model.entity.User">
+        select u.id, u.username, u.nickname, u.avatar, u.status
+        from conversation_members cm
+        join users u on u.id = cm.user_id
+        where cm.conversation_id = #{conversationId}
+        order by u.id
     </select>
 
-    <select id="selectMemberCount" resultType="java.lang.Long">
+    <select id="countConversationMembers" resultType="java.lang.Long">
         select count(*) from conversation_members where conversation_id = #{conversationId}
     </select>
 

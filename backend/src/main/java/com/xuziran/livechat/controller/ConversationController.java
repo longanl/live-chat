@@ -70,9 +70,9 @@ public class ConversationController {
         return Result.success(messagesService.createPrivateConversation(userId, dto.getTargetUserId()));
     }
 
-@DeleteMapping("/{id}/members/{userId}")
+    @DeleteMapping("/{id}/members/{userId}")
     @Operation(summary = "踢出成员（仅群主，不能踢自己）")
-    public Result kick(@PathVariable Long id, @PathVariable Long userId) {
+    public Result<Void> kick(@PathVariable Long id, @PathVariable Long userId) {
         Long operatorId = BaseContext.getCurrentId();
         log.info("踢出群成员 conversationId={} operator={} target={}", id, operatorId, userId);
         conversationService.kickMember(id, operatorId, userId);
@@ -81,7 +81,7 @@ public class ConversationController {
 
     @PutMapping("/{id}")
     @Operation(summary = "修改群信息（仅群主）")
-    public Result updateGroup(@PathVariable Long id, @RequestBody UpdateGroupDTO dto) {
+    public Result<Void> updateGroup(@PathVariable Long id, @RequestBody UpdateGroupDTO dto) {
         Long operatorId = BaseContext.getCurrentId();
         log.info("修改群信息 conversationId={} operator={}", id, operatorId);
         conversationService.updateGroupInfo(id, operatorId, dto);
@@ -90,7 +90,7 @@ public class ConversationController {
 
     @PostMapping("/{id}/members")
     @Operation(summary = "邀请成员加入群聊")
-    public Result addMembers(@PathVariable Long id, @RequestBody MemberIdsDTO dto) {
+    public Result<Void> addMembers(@PathVariable Long id, @RequestBody MemberIdsDTO dto) {
         Long userId = BaseContext.getCurrentId();
         log.info("邀请成员入群 userId={} conversationId={}", userId, id);
         conversationService.addMembers(id, userId, dto);
@@ -99,7 +99,7 @@ public class ConversationController {
 
     @DeleteMapping("/{id}/members/me")
     @Operation(summary = "退出群聊")
-    public Result quit(@PathVariable Long id) {
+    public Result<Void> quit(@PathVariable Long id) {
         Long userId = BaseContext.getCurrentId();
         log.info("退出群聊 userId={} conversationId={}", userId, id);
         conversationService.quit(id, userId);

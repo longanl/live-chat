@@ -38,7 +38,7 @@ public class UsersController {
 
     @Operation(summary = "用户注册")
     @PostMapping("/register")
-    public Result register(@RequestBody RegisterDTO registerDTO) {
+    public Result<Void> register(@RequestBody RegisterDTO registerDTO) {
         log.info("注册：{}", registerDTO);
         userService.register(registerDTO);
         return Result.success();
@@ -68,10 +68,9 @@ public class UsersController {
                 .build();
         return Result.success(userVO);
     }
-    //修改密码
     @Operation(summary = "修改密码")
     @PutMapping("/modifyPassword")
-    public Result updatePassword(@RequestBody PasswordDTO passwordDTO) throws PasswordErrorException {
+    public Result<Void> updatePassword(@RequestBody PasswordDTO passwordDTO) throws PasswordErrorException {
         Long userId = BaseContext.getCurrentId();
         log.info("修改密码 userId={}", userId);
         userService.updatePassword(userId, passwordDTO);
@@ -79,7 +78,7 @@ public class UsersController {
     }
     @Operation(summary = "用户登出")
     @PostMapping("/logout")
-    public Result logout() {
+    public Result<Void> logout() {
         Long userId = BaseContext.getCurrentId();
         log.info("用户：" + userId + "下线");
         userService.logout(userId);
@@ -88,7 +87,7 @@ public class UsersController {
 
     @PostMapping("/updateProfile")
     @Operation(summary = "更新用户信息")
-    public Result updateProfile(@RequestBody ProfileDTO profileDTO) {
+    public Result<Void> updateProfile(@RequestBody ProfileDTO profileDTO) {
         Long userId = BaseContext.getCurrentId();
         log.info("更新用户信息 userId={}", userId);
         userService.updateProfile(userId, profileDTO);

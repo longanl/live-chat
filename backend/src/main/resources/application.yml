@@ -1,49 +1,45 @@
 server:
   port: 8080
+
 spring:
-# 激活配置文件
   profiles:
     active: dev
-
-# Swagger/OpenAPI 文档地址自定义
-springdoc:
-  api-docs:
-    # 接口文档 JSON 地址（默认 /v3/api-docs）
-    path: ${SPRINGDOC_API_DOCS_PATH:/api-docs}
-  swagger-ui:
-    # Swagger UI 地址（默认 /swagger-ui/index.html）
-    path: ${SPRINGDOC_SWAGGER_UI_PATH:/docs}
   main:
     allow-circular-references: true
   servlet:
     multipart:
-      #  文件上传最大限制（需 >= upload.max-video-size）
       max-file-size: 200MB
-      #  文件请求最大限制
       max-request-size: 210MB
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:live_chat}?useSSL=false&serverTimezone=Asia/Shanghai&allowMultiQueries=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:123456}
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    url: /v3/api-docs          # 明确指向 spec 地址
+    tags-sorter: alpha
+    operations-sorter: alpha
+    disable-swagger-default-url: true
+    display-request-duration: true
+  default-produces-media-type: application/json
+  packages-to-scan: com.xuziran.livechat   # 只扫你的 controller，避免误扫
 
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-# 映射文件位置
   mapper-locations: classpath:mapper/*Mapper.xml
 
-
-# 本地文件存储（Nginx 图床）
 upload:
-  # 宿主机图床目录（该目录被 Nginx 容器挂载对外提供访问）
   path: ${UPLOAD_PATH:/var/www/pic_bed}
-  # 对外访问域名前缀，必须带协议与结尾斜杠，例如 https://img.example.com/
   domain: ${UPLOAD_DOMAIN:http://localhost:8888/}
-  # 聊天文件二级目录：{base-dir}/{type}/yyyy/MM/dd/
   base-dir: chat
-  # 头像二级目录：{avatar-dir}/yyyy/MM/dd/
   avatar-dir: user
   image-extensions: jpg,jpeg,png,gif,webp
   video-extensions: mp4,webm,mov
@@ -57,5 +53,3 @@ live-chat:
     token-name: ${JWT_TOKEN_NAME:token}
     secret-key: ${JWT_SECRET:a3f8Kd92LmQ7xPzR5tYwNcVbE1uHsJg4}
     ttl: 7200000
-
-

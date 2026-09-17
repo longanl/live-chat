@@ -34,10 +34,13 @@ public class WsChatController {
     @MessageMapping("/chat.group")
     public void group(@Payload MessageDTO dto, Principal principal) {
         Long senderId = currentUserId(principal);
-        // 指定 conversationId 时校验成员资格；未指定则回落到内置群会话
         Long conversationId = messagesService.resolveGroupConversation(dto.getConversationId(), senderId);
         MessageVO vo = messagesService.saveMessage(senderId, conversationId, dto);
-        messagingTemplate.convertAndSend(Constant.TOPIC_CONVERSATION_PREFIX + conversationId, vo);
+        try {
+            messagingTemplate.convertAndSend(Constant.TOPIC_CONVERSATION_PREFIX + conversationId, vo);
+        } catch (Exception e) {
+            log.error("群消息广播失败，消息已保存: conversationId={}", conversationId, e);
+        }
         log.info("群消息已广播：conversationId={}, senderId={}", conversationId, senderId);
     }
 

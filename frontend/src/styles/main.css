@@ -1,0 +1,3 @@
+/* 全局样式入口：先 token，后基础样式（Element Plus 样式在 main.ts 中引入） */
+@import './variables.css';
+@import './base.css';

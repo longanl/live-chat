@@ -340,18 +340,31 @@ Content-Type: application/json
 GET /friends/list
 ```
 
-**响应**：`Result<User[]>`
+**响应**：`Result<PageResult<User>>`
 
 ```json
 {
   "code": 200,
   "msg": null,
-  "data": [
-    {
-      "id": 2,
-      "username": "bob",
-      "nickname": "鲍勃",
-      "avatar": "http://...",
+  "data": {
+    "total": 1,
+    "page": 1,
+    "size": 20,
+    "list": [
+      {
+        "id": 2,
+        "username": "bob",
+        "nickname": "鲍勃",
+        "avatar": "http://...",
+        "status": 1,
+        "conversationId": 5
+      }
+    ]
+  }
+}
+```
+
+> 带分页参数：`page`（默认 1）、`size`（默认 20，最大 100）。
       "status": 1,
       "password": null,
       "createTime": null,
@@ -384,7 +397,7 @@ GET /friends/list
 GET /friends/require
 ```
 
-**响应**：`Result<User[]>`
+**响应**：`Result<List<User>>`
 
 ```json
 {
@@ -461,9 +474,9 @@ GET /friends/blocked?page={page}&size={size}
 GET /conversations
 ```
 
-**响应**：`Result<ConversationVO[]>`
+**响应**：`Result<PageResult<ConversationVO>>`
 
-> 无 `cursor`/`limit` 参数，一次性返回当前用户的全部会话，按最后消息时间倒序。
+> 带分页参数：`page`（默认 1）、`size`（默认 20，最大 100）。
 
 **`ConversationVO` 字段**
 
@@ -509,7 +522,7 @@ GET /conversations/{id}/members
 
 **路径参数**：`id` (int64)
 
-**响应**：`Result<User[]>`（需为会话成员，按加入顺序）
+**响应**：`Result<PageResult<User>>`（需为会话成员，按加入顺序）
 
 ```json
 {
@@ -881,7 +894,7 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 |---|---|
 | `/topic/conv/{conversationId}` | 群聊消息广播 |
 | `/user/{id}/queue/messages` | 私聊消息（收发双方各收到一份） |
-| `/topic/online/users` | 在线用户列表（`User[]`，连接/断开时广播） |
+| `/topic/online/users` | 在线用户列表（`OnlineUserDTO[]`，连接/断开时广播） |
 | `/topic/online/count` | 在线人数（number） |
 | `/user/queue/presence` | 初始在线快照（需主动请求，见下） |
 | `/user/queue/errors` | 业务错误提示（如“对方不是你的好友，无法私聊”） |
@@ -894,7 +907,7 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 
 ```json
 {
-  "users": [ { "id": 1, "username": "alice", "nickname": "爱丽丝", "avatar": "http://...", "status": 1 } ],
+  "users": [ { "id": 1, "username": "alice", "nickname": "爱丽丝", "avatar": "http://..." } ],
   "count": 1
 }
 ```
@@ -981,7 +994,12 @@ CONNECT 帧校验失败（缺 token / token 无效）会被拒绝。鉴权通过
 | 2 | 响应中仍出现 `password: null` | `/friends/list`、`/friends/require`、`/conversations/{id}/members` | 返回实体改用 VO，或在 `User.password` 上加 `@JsonIgnore` |
 | 3 | 枚举值无 OpenAPI 说明 | `status`、`type`、`messageType`、`FriendRequest.status` | 加 `@Schema(allowableValues=...)` 或改用 Java enum |
 | 4 | `/messages/read` 无法只读到某条 | `/messages/read` | 增加可选 `lastReadMessageId` |
-| 5 | 会话/好友/成员列表无分页 | `/conversations`、`/friends/list`、`/conversations/{id}/members` | 数据量大时补分页 |
+| 5 | 会话/好友/成员列表无分页 | `/conversations`、`/friends/list`、`/conversations/{id}/members` | 已实现 `PageResult<T>` 分页 |
+| 6 | `FriendsController` 部分方法返回原始 `Result` 无泛型 | `FriendsController` add/approve/reject/delete/block/unblock | 已改为 `Result<Void>` |
+| 7 | `ConversationController.kick` 返回原始 `Result` 无泛型 | `ConversationController` | 已改为 `Result<Void>` |
+| 8 | WebSocket 推送 `User` 实体（含多余字段） | `WsPresenceListener`、`WsPresenceController` | 已改为 `OnlineUserDTO` |
+| 9 | `add`/`approve` 未检查拉黑关系 | `FriendsServiceImpl` | 已加 `isBlocked` 检查 |
+| 10 | `broadcastMessage` 限制 100 条成员查询 | `MessagesServiceImpl` | 已改为 `selectAllConversationMembers` |
 
 > 已修复：`GET /user/logout` → `POST /user/logout`；`/uploadavatar687` → `/user/avatar` 并加入拦截器白名单；文件上传 `Content-Type` 已为 `multipart/form-data`。
 > 阶段二新增：`users.signature`、`conversations.avatar/notice`、`chat_messages.client_msg_id/recalled`（含 `(conversation_id,client_msg_id)` 唯一索引）；`user_blocks` 表；拉黑、撤回、群信息修改均已实现。
